@@ -4,8 +4,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository state
 
-Slate is **spec-only**. There is no source code, no build system, and no tests yet — the
-repository holds [specification/slate-vision.md](specification/slate-vision.md) (the authority),
+Slate is **specification plus SDLC machinery** — the product tree (`firmware/`, `server/`,
+`components/`, `apps/`, `validator/`, `tools/`) is not generated yet; it will be built from the
+specification by the skills pipeline below. The working specification set is [specification/MISSION.md](specification/MISSION.md),
+[specification/ARCHITECTURE.md](specification/ARCHITECTURE.md), and
+[specification/ROADMAP.md](specification/ROADMAP.md) (Lumi-format: versions `vA.B` with
+Goal/Tasks/DoD/Tests, released as `A.B.0` per phase — never bump without explicit confirmation;
+each phase keeps its M0–M17 id as a cross-reference). The repository also holds
+[specification/slate-vision.md](specification/slate-vision.md) (the founding concept these derive
+from; also in Ukrainian as `slate-vision.uk.md` — English canonical),
 two UI design briefs for Claude Design —
 [specification/ui-design-brief.md](specification/ui-design-brief.md) (design language, shell,
 first applications; concrete token values proposed there) and
@@ -202,3 +209,41 @@ spec: keyboard = the Tab5 Macintosh port's I2C driver (`0x6D`, matrix-event) ado
 the key map defined then; `list-view` stays fixed-count (variable length lives in `doc-view` /
 `chat-view`); portability beyond Tab5 waits for second hardware (roles/tokens are the prepared
 mechanism); assets, trust model, `notice`, and the audio seam are summarised above.
+
+## The generation pipeline (`.claude/skills/`)
+
+Imported from the `agent-arena-sandbox` project (via the RoboFace retarget) and retargeted to
+Slate: issue ids **`SLATE-###`** (globally sequential across every phase and regeneration run —
+never reset), issues files under `specification/roadmap/implementation/`, phases `vA.B` from
+[specification/ROADMAP.md](specification/ROADMAP.md), this repo's seams (ARCHITECTURE §Contracts).
+Two workflows; do not mix them within one version:
+
+**A. GitHub-driven** — `generate-issues` → `upload-issues` → `execute-issues` →
+`review-and-fix-issues` → `release-version`, orchestrated per phase by
+**`/ship-phase <selector>[,…] [--no-harden]`** with a `harden-findings` sweep at each phase
+boundary. Needs an authenticated `gh`.
+
+**B. File-driven, offline** — `reconcile-issues vA.B` → `execute-issues-file vA.B` →
+`review-and-fix-issues vA.B` → `release-version A.B.0`, orchestrated by **`/ship-solution`**; it
+executes from `specification/roadmap/implementation/vA.B-issues.md` and cannot generate one.
+
+`/reset-generated` clears what a tracked run created, reading the run's own event log. It never
+touches `codegen/`, `.claude/`, `specification/`, or `.env*`.
+
+Rules the skills depend on: **one issue = one commit**; tests ship with the feature; a seam change
+carries its ARCHITECTURE update **and** contract test in the same commit; **server pytest runs
+only on `192.168.1.197`** via `tools/deploy` (sync → remote pytest → restart on green; local runs
+are a pre-v1.1 bootstrap exception); firmware validation is `idf.py build` + a USB flash/smoke on
+the attached Tab5 when device-visible; **no paid APIs and no live network in any suite** (mock
+Wikipedia/Telethon/Agent SDK/ASR-TTS; the fake device drives the wire); ask or reconcile rather
+than guessing when an issues file disagrees with the code. Releases follow the Lumi standard:
+phase `vA.B` → tag `vA.B.0`, **never bump without explicit user confirmation**.
+
+## Codegen tracking (`codegen/`)
+
+The subject-independent half: event log (`tracker/`, stdlib-only), Claude Code hooks (wired in
+`.claude/settings.json`), and the dashboard on **:8420** (never 8000 — the Slate server owns it).
+Its suite: `cd codegen && ../.venv/bin/python -m pytest tests` (546 green; deps:
+`python3 -m venv .venv && .venv/bin/pip install -r codegen/requirements.txt httpx`).
+`codegen/runs/` and `codegen/var/` are gitignored evidence. The bundled design documents narrate
+the run they were written against in another repo — machinery applies, narration does not.

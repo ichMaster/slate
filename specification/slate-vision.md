@@ -854,6 +854,16 @@ migrated later. Each step is independently testable and ends with something
 running. *Done when* is the exit gate — demonstrable on hardware (or, for
 M12, on the host), never a code review.
 
+How applications run **before the shell exists** (M9): the device is a
+single-application terminal. The server address and the start page live in
+firmware config — M0's pattern, kept — so at M4 the console is simply the
+page the device boots into. From M5, navigation makes the server's **index**
+the natural start page: boot, land on the index, navigate into an
+application, `back` or `root` out — still one session at a time, no picker,
+no switcher, and no state retained across leaving an application. That is
+precisely what M9 adds, and why the input-preservation proof (M10) waits
+for it.
+
 **M0 — Walking skeleton (the concept on the desk, and every proof with it).**
 One very simple application alive end to end — and every proof-of-concept
 the platform needs, concentrated in one milestone. Everything inessential is
