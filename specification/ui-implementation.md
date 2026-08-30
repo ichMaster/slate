@@ -26,7 +26,7 @@ value, that is a design bug, not a firmware feature.
 
 ---
 
-## 2. Token layer (M3, `firmware/src/tokens.c`)
+## 2. Token layer (M3 / phase v1.3, `firmware/src/tokens.c`)
 
 ### 2.1 Colour
 
@@ -303,7 +303,7 @@ data.* Keep it — it is the one place the background rule is visible.
 Each application is a directory in `apps/`. Structure is XML; every dynamic
 element carries a page-unique `id`; nothing here contains a pixel coordinate.
 
-### 5.1 Status console — `apps/console/index.xml` (M4, boards `A1`/`V1`)
+### 5.1 Status console — `apps/console/index.xml` (M4 / v2.1, boards `A1`/`V1`)
 
 ```xml
 <column pad="lg" gap="lg">
@@ -333,7 +333,7 @@ Handler pushes once a second: `cpu.text`+`color` (`ok` <70, `warn` 70–90,
 information, not a condition. Two faint horizontals at 25 % and 75 %, axis
 labels in `caption`/`muted` inside the plot, no legend, no autoscale.
 
-### 5.2 Server terminal — `apps/terminal/index.xml` (M6, board `A2`)
+### 5.2 Server terminal — `apps/terminal/index.xml` (M6 / v2.3, board `A2`)
 
 ```xml
 <column pad="lg" gap="md">
@@ -354,7 +354,7 @@ carries `cmd`. Output arrives as repeated `out.text` tail re-sends — never an
 append. A command fired during a WiFi drop queues, the status bar warns, and it
 executes on reconnect: that path is board `X2` strip 3, not a hypothetical.
 
-### 5.3 Markdown browser — `apps/md/` (M7, boards `A3`, `A4`)
+### 5.3 Markdown browser — `apps/md/` (M7 / v2.4, boards `A3`, `A4`)
 
 `listing.xml?path=` — `page-header` (path tail as title, full path as eyebrow,
 item count right) + `list-view rows="9"` with a two-cell row template
@@ -367,7 +367,7 @@ The server parses the Markdown; the device never sees source. Links between
 files arrive as link blocks and navigate with `push`, so `back` retraces every
 hop.
 
-### 5.4 Wikipedia — `apps/wiki/` (M8, boards `A5`, `A6`)
+### 5.4 Wikipedia — `apps/wiki/` (M8 / v2.5, boards `A5`, `A6`)
 
 `search.xml` — centred 880 column: `Вікіпедія` in `title` · `text-field`
 (placeholder `Пошук…`, focus ring) + `Search` primary · `Результати` /
@@ -378,7 +378,7 @@ XML by base path; `subscribe` and history carry the full path. One cached
 structure, many history entries. Cyrillic titles in the header prove the font
 build.
 
-### 5.5 Notes — `apps/notes/index.xml` (M10, board `A7`)
+### 5.5 Notes — `apps/notes/index.xml` (M10 / v4.1, board `A7`)
 
 ```xml
 <column pad="lg" gap="lg">
@@ -402,7 +402,7 @@ signature and this page's *only* acceptance criterion that matters. The field's
 contents live in the LVGL widget, are never sent until `save`, and are never
 overwritten by a `value` update while the field has focus.
 
-### 5.6 Companion — `apps/claude/` (M11, boards `A8`, `A9`, `A10`)
+### 5.6 Companion — `apps/claude/` (M11 / v4.2, boards `A8`, `A9`, `A10`)
 
 `dashboard.xml` — header row (`Claude Code` title, session + branch in
 `caption`/`muted`, `● running` in `ok` right) · four `stat-card`s · a row of
@@ -421,7 +421,8 @@ up to 3 choices, first `primary`, stretched equally · a free-form `text-field`
 
 ## 6. M0, and why it looks nothing like the above
 
-Board set `Slate M0 Prototype.html`. Raw LVGL widgets, stock theme, default
+Board set `Slate M0 Prototype.html`; the standalone brief is
+[ui-m0-brief.md](ui-m0-brief.md). Raw LVGL widgets, stock theme, default
 font, `#e0e0e0` ground, no tokens, no components, no status bar, no chrome.
 Build it exactly that ugly:
 
@@ -444,18 +445,21 @@ quarry, not foundation — M1 starts the kept trees.
 
 ## 7. Build order and acceptance
 
-| Step | Adds to the UI | Boards that gate it |
-|---|---|---|
-| M0 | raw widgets, doc-view v0 | M0-1, M0-2 |
-| M3 | token layer, both fonts, states trio, `page-header`/`text-block`/`stat-card` | `F1` |
-| M4 | `chart` | `A1`, plus `V1` for the theme flip |
-| M5 | error banner v1, pressed states, queue warning (provisional) | `X1` |
-| M6 | `text-field`, `button-row`, `log-view`, `mono` in anger | `A2` |
-| M7 | `list-view`, `doc-view` incl. link blocks | `A3`, `A4` |
-| M8 | nothing new — Cyrillic and deep history | `A5`, `A6` |
-| M9 | `status-bar`, picker, switcher, final error overlay | `S1`, `S2`, `X2`, `X1` |
-| M10 | nothing new — input preservation | `A7` |
-| M11 | `chat-view`, `progress` | `A8`, `A9`, `A10` |
+| Step | Phase | Adds to the UI | Boards that gate it |
+|---|---|---|---|
+| M0 | v0.1 | raw widgets, doc-view v0 | M0-1, M0-2 |
+| M3 | v1.3 | token layer, both fonts, states trio, `page-header`/`text-block`/`stat-card` | `F1` |
+| M4 | v2.1 | `chart` | `A1`, plus `V1` for the theme flip |
+| M5 | v2.2 | error banner v1, pressed states, queue warning (provisional) | `X1` |
+| M6 | v2.3 | `text-field`, `button-row`, `log-view`, `mono` in anger | `A2` |
+| M7 | v2.4 | `list-view`, `doc-view` incl. link blocks | `A3`, `A4` |
+| M8 | v2.5 | nothing new — Cyrillic and deep history | `A5`, `A6` |
+| M9 | v3.1 | `status-bar`, picker, switcher, final error overlay | `S1`, `S2`, `X2`, `X1` |
+| M10 | v4.1 | nothing new — input preservation | `A7` |
+| M11 | v4.2 | `chat-view`, `progress` | `A8`, `A9`, `A10` |
+
+Phase ids are [ROADMAP.md](ROADMAP.md)'s `vA.B`; the M-ids are the original step
+numbers from [slate-vision.md](slate-vision.md), kept as cross-references.
 
 Per-board acceptance, in order of how easily each is got wrong:
 
@@ -472,7 +476,7 @@ Per-board acceptance, in order of how easily each is got wrong:
    the clock's position.
 7. Half-typed text survives a switch away and back (`A7`).
 
-## 8. Validator hooks (M12)
+## 8. Validator hooks (M12 / v5.1)
 
 Beyond the vision spec's schema and registry checks, the design adds four the
 validator can enforce cheaply, and should:

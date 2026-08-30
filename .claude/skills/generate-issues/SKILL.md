@@ -32,6 +32,15 @@ continue across phase files **and across regeneration runs** — never reset.
 3. Read [specification/ARCHITECTURE.md](../../../specification/ARCHITECTURE.md) for the contracts and
    components the phase touches, and [specification/MISSION.md](../../../specification/MISSION.md)
    for the product vision and scope (MVP vs later).
+3a. For a **UI-touching phase** (components, pages, the shell, tokens, the validator's visual
+   checks) also read [specification/ui-implementation.md](../../../specification/ui-implementation.md) —
+   token values, per-component geometry, the §5 page specs, the §7 board-gated acceptance, and
+   the §8 validator hooks. The design canvases it names win for *appearance*; the guide wins for
+   *structure*. Bake the relevant §7 acceptance lines into the issues' acceptance criteria.
+   For **v0.1** specifically, the screen is deliberately crude — read
+   [specification/ui-m0-brief.md](../../../specification/ui-m0-brief.md) and the guide's §6: raw
+   widgets, stock theme, Cyrillic tofu on purpose; if an M0 issue makes the screen look designed,
+   the phase has drifted.
 4. Read `CLAUDE.md` for code conventions, the module map, and the non-negotiable seams.
 5. **Find the next free `SLATE-###` id — never restart the numbering.** Ids are globally
    sequential across every phase *and every regeneration run*. Check **both** sources and

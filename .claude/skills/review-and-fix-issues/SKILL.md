@@ -41,7 +41,9 @@ forward without flagging it.
 Read the in-scope modules — route by [ARCHITECTURE.md](../../../specification/ARCHITECTURE.md) §2 — and focus
 on the highest-risk seams first: the six wire messages and the session lifecycle (§Contracts, §Protocol),
 the closed dynamic-property set and the applicator, the component manifest and the action registry,
-and the device-feel/server-meaning split.
+and the device-feel/server-meaning split. For UI-touching phases, also review against
+`specification/ui-implementation.md` §7 acceptance (digit jitter, the bottom-anchored tail,
+`A4` ≡ `A6`, status-bar permutations, the focus-guard).
 
 Be **adversarial** — hunt for *real* defects, not restatements of what works:
 - **Concurrency:** races at `await` points, read-then-write without the DB guard handled, async

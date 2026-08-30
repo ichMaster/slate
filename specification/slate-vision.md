@@ -194,7 +194,9 @@ small vocabularies go to die.
 
 The contract each component offers to pages, servers, and the validator. Static
 attributes are fixed in XML; dynamic properties come only from the closed set
-below; every dynamic component instance carries a page-unique `id`.
+below; every dynamic component instance carries a page-unique `id`. Visual
+geometry, states rendering, and the design boards that gate each component
+live in [ui-implementation.md](ui-implementation.md).
 
 #### `page-header`
 Title bar. Static: `title`, `back` (default `true`) — the back affordance fires
@@ -898,7 +900,8 @@ verdicts, and the test scaffolding are the deliverables.
   region below), LVGL's default theme and font, lv_xml's native flex
   attributes for centring. The philosophy must be
   visible on screen: the button's pressed state is instant and local, while
-  the number changes only when the server's `data` frame returns.
+  the number changes only when the server's `data` frame returns. Full brief:
+  [ui-m0-brief.md](ui-m0-brief.md); [ui-implementation.md §6](ui-implementation.md).
 
   ```
   ┌────────────────────────────────┐

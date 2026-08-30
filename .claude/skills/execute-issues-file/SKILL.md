@@ -62,7 +62,7 @@ For each issue:
    ([ARCHITECTURE.md](../../../specification/ARCHITECTURE.md) §Components): `server/` (all meaning —
    pages/assets over HTTP, the WS live channel, sessions, handlers), `firmware/` (Tab5: renderer,
    applicator, cache, shell, tokens; renders what it is sent, decides nothing), `components/` (the
-   design system as data — definitions + action registry + manifest), `apps/` (pages only, no logic).
+   design system as data — definitions + action registry + manifest), `apps/` (pages only, no logic; UI phases follow `specification/ui-implementation.md` — tokens, geometry, §5 page specs, §7 board-gated acceptance).
    A **seam change** (a **wire message**, the **dynamic-property set**, a **component contract / the
    manifest**, the **action registry**, **tokens/roles**, **session binding**, or **cache honesty**) updates
    `specification/ARCHITECTURE.md` **and** its contract test in the **same** commit. Strict typing;

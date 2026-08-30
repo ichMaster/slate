@@ -63,7 +63,9 @@ into something else.
   `chart`, `log-view`, `doc-view`, `chat-view`). Pages are assembled only from these, never from raw LVGL
   widgets, and arranged only with `row`/`column` flex containers using spacing tokens — no pixel
   coordinates. Each component's full contract (static attrs, dynamic props, events, states) is in
-  the spec's **Component contracts** section — implement against that, and grow the vocabulary
+  the spec's **Component contracts** section, with geometry, token values, page specs, and
+  board-gated acceptance in [specification/ui-implementation.md](specification/ui-implementation.md)
+  (binding for UI work; boards win for appearance) — implement against those, and grow the vocabulary
   only when a named application demands it (that's how `chart`, `log-view`, and `doc-view` got
   in). `doc-view` means the device never parses Markdown — servers convert to typed blocks.
 - **Pages name roles and tokens, never pixels and hex.** Two font faces exactly (a UI face and
@@ -163,7 +165,9 @@ push), plus a throwaway **`doc-view` v0** — one hard-coded `.md` parsed server
 blocks, pushed as `items`, rendered as a scrollable label column: the platform's heaviest
 renderer, proven first — over a trimmed wire (`subscribe`/`data`/`event` only), no cache, no
 sessions in plural, no shell. The code is allowed to be throwaway; its DoD is philosophical: rebooting the device must
-not reset the count, because the count never lived there. All PoC and test scaffolding
+not reset the count, because the count never lived there. Its screen is specified in
+[specification/ui-m0-brief.md](specification/ui-m0-brief.md) + ui-implementation.md §6 —
+deliberately crude, raw widgets, Cyrillic tofu on purpose; do not design it. All PoC and test scaffolding
 concentrate in M0: the `lv_xml`-on-P4 go/no-go verdict (fallback: a vendored SAX parser with the
 vocabulary hand-mapped to `lv_*`), parse/heap measurements, the panel-revision probe, and the
 pytest suite + fake-device script under `tools/` that every later milestone extends, never

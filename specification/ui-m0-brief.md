@@ -70,7 +70,7 @@ one Ukrainian sentence to show the caveat below.
 - On the document: *"doc-view v0 — the platform's heaviest renderer, proven
   first; ~50 blocks must scroll smoothly"*.
 - Caveat note: *"default LVGL font is Latin-only — Cyrillic renders as
-  tofu in M0; real fonts arrive with the design system (M3)"*.
+  tofu in M0; real fonts arrive with the design system (M3 / phase v1.3)"*.
 
 ## Optional artboard 2 — the three boot states
 

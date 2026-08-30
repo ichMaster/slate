@@ -16,7 +16,7 @@ The concept on the desk, and every proof with it. One very simple application al
 
 **Goal:** the whole concept demonstrated on one screen, and the P4 question answered.
 
-Minimal bring-up (Tab5 BSP, LVGL, `LV_USE_XML`), a single-file Python server (~150 lines) speaking a trimmed wire (`subscribe`/`data`/`event` only), one page fetched over HTTP at boot (no cache, hard-coded server address), and the app: a **counter** whose number lives on the server (a raw value label + an `increment` button), a server-clock label ticking at 1 Hz (unsolicited push), and **`doc-view` v0** — one hard-coded `.md` parsed server-side into typed blocks, pushed as a single `items` update, rendered as a scrollable label column. Raw LVGL widgets, default theme, no components, no tokens; three firmware-drawn states (`connecting…`, unreachable, the page). The trimmed wire thus exercises both update shapes — scalar and structured. UI details: [ui-m0-brief.md](ui-m0-brief.md) and the M0 canvas.
+Minimal bring-up (Tab5 BSP, LVGL, `LV_USE_XML`), a single-file Python server (~150 lines) speaking a trimmed wire (`subscribe`/`data`/`event` only), one page fetched over HTTP at boot (no cache, hard-coded server address), and the app: a **counter** whose number lives on the server (a raw value label + an `increment` button), a server-clock label ticking at 1 Hz (unsolicited push), and **`doc-view` v0** — one hard-coded `.md` parsed server-side into typed blocks, pushed as a single `items` update, rendered as a scrollable label column. Raw LVGL widgets, default theme, no components, no tokens; three firmware-drawn states (`connecting…`, unreachable, the page). The trimmed wire thus exercises both update shapes — scalar and structured. UI details: [ui-m0-brief.md](ui-m0-brief.md), [ui-implementation.md §6](ui-implementation.md), and the M0 canvas.
 
 **Tasks:**
 - ESP-IDF project with the Tab5 BSP; boot to a blank LVGL screen with display + touch alive; probe and record the panel revision (ILI9881C vs ST7123/ST7121).
@@ -106,6 +106,7 @@ One page (6.5): a `stat-card` grid (CPU, memory, disk, uptime) and a CPU-history
 **Tasks:**
 - The `chart` component (wraps `lv_chart`; `kind`/`y-min`/`y-max`/`points` static, `items` dynamic) into `components/` + manifest.
 - `apps/console/` page + handler (psutil, 1 Hz push, threshold colours, `updated` stamp).
+- Layout, thresholds, and chart styling per [ui-implementation.md §5.1](ui-implementation.md); boards `A1`/`V1` gate acceptance (digit jitter, the theme flip).
 
 **DoD:** the console runs untouched for an hour with a stable heap; a server restart resumes the cards unprompted; the chart scrolls its history.
 
@@ -136,6 +137,7 @@ One page (6.6): a command `text-field` (Enter fires `run` when the keyboard is a
 **Tasks:**
 - `text-field`, `button-row`, `log-view` into `components/` + manifest (focus ring, variants, bottom-anchored tail per [ui-implementation.md](ui-implementation.md)).
 - `apps/terminal/` page + handler (subprocess, output buffering, tail re-send, ANSI strip).
+- Page spec per [ui-implementation.md §5.2](ui-implementation.md); board `A2` gates (bottom-anchored tail).
 
 **DoD:** a long directory listing streams into the scrollback; follow-tail holds unless the user scrolls up; a command fired during a WiFi drop queues, warns, and executes on reconnect.
 
@@ -150,6 +152,7 @@ Two pages (6.12): a parameterised listing (`?path=`) — a `list-view` of folder
 **Tasks:**
 - `list-view` (fixed rows, row template, additive `row` key) and `doc-view` (block kinds, `link` key, `accent` link rows) into `components/` + manifest.
 - `apps/md/` listing + reader pages; handler: directory walk, Markdown → blocks, link resolution.
+- Geometry and per-kind rendering per [ui-implementation.md §3.4/§3.9/§5.3](ui-implementation.md); boards `A3`/`A4`.
 
 **DoD:** descend two folders, open a file, follow a link to another file, and back retraces every step; headings, bullets, and code render as typed blocks; a directory of real notes (an Obsidian vault will do) browses comfortably.
 
@@ -163,6 +166,7 @@ A search page (6.7: `text-field` + results `list-view`, Cyrillic in anger) and o
 
 **Tasks:**
 - `apps/wiki/` search + article pages; handler: search API, article fetch, wikitext/HTML → blocks, link extraction into link blocks.
+- Page spec per [ui-implementation.md §5.4](ui-implementation.md); boards `A5`/`A6` — `A4` ≡ `A6` (one code path) is an acceptance rule.
 
 **DoD:** search → article → link → link → back → back retraces exactly; Cyrillic articles render; the device never touches the internet — the server proxies everything.
 
@@ -178,7 +182,7 @@ The device becomes a terminal for many applications at once — assembled from t
 
 **Goal:** many worlds, many applications, state that survives switching. Brings `status-bar`.
 
-Server picker (saved servers, add/edit, auto-connect); sessions in plural (one `lv_screen` per open application, an open-limit with oldest-first eviction, explicit close); the switcher grouped by server (one WS per connected world; each world's index always present); the background rule enforced (only the active session subscribed; `notice` badges surface backgrounded sessions, tap switches); the status bar complete (per-server connection, battery, clock, queue warning, notice badges) and the error overlay in final form; the keyboard (Macintosh-port I2C driver `0x6D` adopted as-is; the shell key map — back, switcher, submit, address entry — defined against real screens); local actions complete (brightness, volume, sleep, back, switch, close). Boards `S1`/`S2`/`X1`/`X2` gate the visuals.
+Server picker (saved servers, add/edit, auto-connect); sessions in plural (one `lv_screen` per open application, an open-limit with oldest-first eviction, explicit close); the switcher grouped by server (one WS per connected world; each world's index always present); the background rule enforced (only the active session subscribed; `notice` badges surface backgrounded sessions, tap switches); the status bar complete (per-server connection, battery, clock, queue warning, notice badges) and the error overlay in final form; the keyboard (Macintosh-port I2C driver `0x6D` adopted as-is; the shell key map — back, switcher, submit, address entry — defined against real screens); local actions complete (brightness, volume, sleep, back, switch, close). Shell chrome per [ui-implementation.md §3.11–3.12/§4](ui-implementation.md); boards `S1`/`S2`/`X1`/`X2` are the acceptance list (every status-bar permutation reachable, none shifts the clock).
 
 **Tasks:**
 - `status-bar` into `components/`; picker + switcher screens on the library.
@@ -204,7 +208,7 @@ One capture page (6.4: a multi-line `text-field` + Save, a recent-notes `list-vi
 
 **Tasks:**
 - `apps/notes/` pages + handler (note store, list, Markdown → blocks reuse).
-- The focus-guard rule in `text-field` (no `value` overwrite while focused) if not already pinned.
+- The focus-guard rule in `text-field` (no `value` overwrite while focused) if not already pinned; page spec per [ui-implementation.md §5.5](ui-implementation.md), board `A7`.
 
 **DoD:** leave mid-sentence, switch to another application, come back — the draft is intact; a note with headings, bullets, and code renders as typed blocks; capture → list → reader → back flows without a page re-send.
 
@@ -219,6 +223,7 @@ Claude Code hooks write events; the daemon serves them (6.1). The dashboard: fou
 **Tasks:**
 - `chat-view` and `progress` into `components/` + manifest (bubbles, 76 % max width, `pending` beneath the bubble; track/bar geometry).
 - The hooks → event-file → daemon pipeline; dashboard/question/chat pages in `apps/claude/`.
+- Layout per [ui-implementation.md §5.6](ui-implementation.md) (bubbles §3.10, progress §3.7); boards `A8`–`A10` (the streaming-bubble acceptance).
 - Agent SDK injection for chat; question round-trip (choices + free text); `notice` on question/completion.
 
 **DoD:** a real Claude Code run drives the dashboard; a mid-run question lands as a `navigate`, is answered from the keyboard, and generation resumes; chat round-trips with streamed replies — all while other applications stay open and intact.
@@ -239,7 +244,7 @@ The host build of LVGL shares the firmware's renderer layer — same `lv_xml`, s
 
 **Tasks:**
 - `validator/`: host renderer build; the CLI with every check; PNG output.
-- Golden-PNG suite for all pages in `apps/`, both themes.
+- Golden-PNG suite for all pages in `apps/`, both themes, diffed against their boards; the design's validator hooks per [ui-implementation.md §8](ui-implementation.md) — raw pixels an error, the font-role whitelist, the raw-hex warning.
 - The authoring skill/prompt; a canned Markdown description exercised end to end.
 - CI wiring: ruff + pytest + validate + golden diffs.
 
