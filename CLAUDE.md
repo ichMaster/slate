@@ -10,7 +10,11 @@ two UI design briefs for Claude Design —
 [specification/ui-design-brief.md](specification/ui-design-brief.md) (design language, shell,
 first applications; concrete token values proposed there) and
 [specification/ui-m0-brief.md](specification/ui-m0-brief.md) (the deliberately crude M0
-walking-skeleton screen, kept on its own canvas) — a LICENSE, and a Python-flavoured `.gitignore`
+walking-skeleton screen, kept on its own canvas) — plus
+[specification/ui-implementation.md](specification/ui-implementation.md) (how the designed screens
+become tokens, components, and page XML; per-step board-gated acceptance; **light theme is
+primary**) and the three design-canvas exports (`Slate Product UI - Light/Dark.html`,
+`Slate M0 Prototype.html`, the visual source of truth) — a LICENSE, and a Python-flavoured `.gitignore`
 (partially apt: the server side **is Python** by decision; the ESP-IDF/C firmware entries will
 need adding once real code lands).
 

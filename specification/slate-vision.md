@@ -294,8 +294,8 @@ contract shared by firmware, server, and agent.
 ### Text and fonts
 
 Fonts are compiled into firmware; no page can introduce one. The platform
-compiles a **single face** at a small ladder of sizes, covering Latin, Cyrillic,
-and the LVGL symbol glyphs.
+compiles **two faces and no more**. The first is the UI face, at a small
+ladder of sizes, covering Latin, Cyrillic, and the LVGL symbol glyphs.
 
 Pages never name pixel sizes. They name **roles** — `body`, `title`, `caption`,
 `stat-value` — and each device's firmware maps roles to sizes. This indirection
@@ -339,7 +339,7 @@ library handles this once so applications never have to:
 
 A fourth, **error**, is desirable for anything that can fail.
 
-The shell drives the transitions, so applications get states for free: a
+The firmware drives the transitions, so applications get states for free: a
 component renders empty until a `subscribe` names its `id`, enters loading
 when one does, and becomes ready on the first `data` update that names it.
 
@@ -586,8 +586,9 @@ Spacing has tokens exactly as type and colour do — `sm`, `md`, `lg`, mapped pe
 device.
 
 The server picker and the application switcher are themselves built from the
-component library. The shell is the vocabulary's first consumer: the platform's
-own screens prove the components before any application does.
+component library — the same vocabulary the applications use, which five
+applications have already proven by the time the shell is built (§8). Nothing
+in the shell is ad-hoc.
 
 ### Local actions
 
@@ -687,7 +688,7 @@ RoboFace server already speaks thin-client — JSON control frames plus binary
 PCM over WSS to an M5Stack Core S3 — so the Slate handler fronts the same
 orchestrator with a `chat-view`, adding the text interface RoboFace never had.
 **No face**: the animated face stays RoboFace's own; Slate renders the
-transcript, not the character. Voice waits on the audio seam (M8), whose
+transcript, not the character. Voice waits on the audio seam (M15), whose
 reference implementation is RoboFace's own wire.
 
 - Exercises: streaming assistant replies, a live AI backend behind a handler.
@@ -827,7 +828,8 @@ single checkout.
 
 ```
 slate/
-  specification/   this document
+  specification/   this document, the UI briefs + implementation guide,
+                   and the design canvas exports
   components/      component definitions + action registry (the contract)
   firmware/        ESP-IDF project, Tab5 first
   server/          Python reference server + Claude Code companion daemon
@@ -864,10 +866,11 @@ verdicts, and the test scaffolding are the deliverables.
   wire over WS — `subscribe`, `data`, `event`, nothing else.
 - One page fetched from the server at boot; no cache, no revalidation; the
   server address hard-coded in firmware config.
-- The app — a **counter**: a `stat-card` shows a number owned by the server,
-  a button sends `increment`, the server pushes the new value back. A second
-  `stat-card` ticks with the server's clock — unsolicited push, proven on day
-  one.
+- The app — a **counter**: a plain value label shows a number owned by the
+  server, a button sends `increment`, the server pushes the new value back. A
+  second label ticks with the server's clock — unsolicited push, proven on day
+  one. (No components exist yet — these are raw widgets; `stat-card` arrives
+  at M3.)
 - **`doc-view` v0**, throwaway but proving the heaviest renderer early: the
   server parses one hard-coded `.md` file into typed blocks and pushes them
   as an `items` update; the device renders them as a scrollable column of
@@ -992,7 +995,8 @@ Brings `chart` into the library.
 - One page: a `stat-card` grid (CPU, memory, disk, uptime) and a CPU-history
   `chart`; psutil behind the handler, pushing once a second.
 - No input, no navigation — the pressure lands on update volume and render
-  cost instead.
+  cost instead. 6.5's restart actions and their confirmations arrive free once
+  M5's events exist — an enhancement to this app, not a step.
 
 *Done when:* the console runs untouched for an hour with a stable heap; a
 server restart resumes the cards unprompted; the chart scrolls its history.
@@ -1131,7 +1135,8 @@ Closes the agent’s feedback loop: a page is proven without hardware.
 *Done when:* seeded errors (unknown component, bad action, duplicate id, raw
 hex) each fail with a readable message; a sample page written by the agent
 from a Markdown description passes clean and runs on hardware unmodified; CI
-is green over `apps/`. The first real generated application is the next step.
+is green over `apps/`. The first real generated application is M13 — the
+first of the optional steps.
 
 Everything below this line is **optional**. The platform is complete at M12
 — shell, component library, flagship, and the authoring loop. M13–M17 are
@@ -1220,4 +1225,4 @@ One remains, and only hardware can answer it:
 Everything else this section once held has been decided and folded into the
 sections above: sessions, reconnection, versioning, caching, parameterised
 pages, assets, fonts, colour, layout and its portability policy, the keyboard,
-the trust model, the `notice` message, and the audio seam's direction (M8).
+the trust model, the `notice` message, and the audio seam's direction (M15).

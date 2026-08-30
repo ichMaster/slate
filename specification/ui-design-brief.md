@@ -6,9 +6,9 @@ with an attachable 70-key keyboard. The device renders pages sent by a server;
 all logic lives server-side. The UI must feel calm, instrument-like, and
 legible at arm's length: a desk terminal, not a phone.
 
-**Canvas setup:** every artboard is **1280×720 landscape**. Primary
-presentation is the **dark theme** (a device that sits on a desk day and
-night); include one light-theme variant board to prove the token system flips.
+**Canvas setup:** every artboard is **1280×720 landscape**. The **light
+theme is primary**; as built, both themes exist as full canvases, so the token
+flip is proven end to end rather than by a single variant board.
 All values below are the proposed defaults — they map 1:1 onto the platform's
 token system, so changing them later is a palette swap, not a redesign.
 
@@ -18,7 +18,7 @@ token system, so changing them later is a palette swap, not a redesign.
 
 ### Colour tokens
 
-| Token | Dark (primary) | Light (variant) | Used for |
+| Token | Dark | Light (primary) | Used for |
 |---|---|---|---|
 | `surface` | `#161513` | `#f5f2ea` | screen background |
 | `surface-2` | `#211f1c` | `#ffffff` | cards, bars, input fields |
