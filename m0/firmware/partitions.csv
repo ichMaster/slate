@@ -1,0 +1,13 @@
+# Slate M0 partition table.
+#
+# The stock "single app, large" layout leaves 1.5 MB for the app, and the two
+# stock Montserrat faces alone take the binary to within 3% of it. The Tab5 has
+# 16 MB of flash, so the app gets 4 MB and the question stops being interesting.
+#
+# One app partition, no OTA: v0.1 is flashed over USB and thrown away at v1.1.
+#
+# Name,   Type, SubType, Offset,   Size
+nvs,      data, nvs,     0x9000,   0x6000
+phy_init, data, phy,     0xf000,   0x1000
+factory,  app,  factory, 0x10000,  4M
+storage,  data, spiffs,  ,         1M

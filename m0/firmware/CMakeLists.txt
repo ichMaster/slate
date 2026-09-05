@@ -10,7 +10,13 @@ cmake_minimum_required(VERSION 3.16)
 # credentials and the server address in firmware — they are the only secrets
 # that may live there — but this repository is public, so the real values stay
 # out of it. Later entries win, so the local file overrides the committed one.
-set(SDKCONFIG_DEFAULTS "sdkconfig.defaults;sdkconfig.defaults.local")
+#
+# It is added only when present: ESP-IDF errors out on a listed file that does
+# not exist, which would mean a fresh clone could not build at all.
+set(SDKCONFIG_DEFAULTS "sdkconfig.defaults")
+if(EXISTS "${CMAKE_CURRENT_LIST_DIR}/sdkconfig.defaults.local")
+    list(APPEND SDKCONFIG_DEFAULTS "sdkconfig.defaults.local")
+endif()
 
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 project(slate_m0)

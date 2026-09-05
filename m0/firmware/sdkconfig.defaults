@@ -42,7 +42,11 @@ CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG=y
 
 # Flash: 16 MB on the Tab5.
 CONFIG_ESPTOOLPY_FLASHSIZE_16MB=y
-CONFIG_PARTITION_TABLE_SINGLE_APP_LARGE=y
+# A custom table rather than SINGLE_APP_LARGE: the two stock Montserrat faces
+# alone take the binary to within 3% of that layout's 1.5 MB app partition. See
+# partitions.csv.
+CONFIG_PARTITION_TABLE_CUSTOM=y
+CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
 
 # The whole reason v0.1 exists: LVGL's runtime XML loader, and with it the
 # vendored expat. LVGL carried this at 9.3/9.4 and removed it at 9.5, which is
@@ -54,3 +58,10 @@ CONFIG_LV_USE_XML=y
 # needs to turn a data update's `id` into a widget. The two halves of Slate's
 # page model — named elements in XML, targeted updates by name — rest on it.
 CONFIG_LV_USE_OBJ_NAME=y
+
+# Two extra stock sizes, and only two. M0 has no type ladder — the size roles
+# and both real faces arrive with the token layer at v1.3. 48 is the counter's
+# "~80 px" from the brief at the nearest stock size; 24 makes doc-view headings
+# "merely larger" without inventing a hierarchy.
+CONFIG_LV_FONT_MONTSERRAT_24=y
+CONFIG_LV_FONT_MONTSERRAT_48=y

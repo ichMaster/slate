@@ -4,6 +4,7 @@ idf_component_register(
         "panel_probe.c"
         "xml_poc.c"
         "applicator.c"
+        "doc_view.c"
         "net.c"
     INCLUDE_DIRS "."
     REQUIRES

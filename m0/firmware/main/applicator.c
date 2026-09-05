@@ -2,6 +2,7 @@
 
 #include "bsp/m5stack_tab5.h"
 #include "cJSON.h"
+#include "doc_view.h"
 #include "esp_log.h"
 
 static const char *TAG = "slate.apply";
@@ -62,11 +63,7 @@ void slate_applicator_apply(const char *widget_id, const char *json_update)
 
     cJSON *items = cJSON_GetObjectItem(update, "items");
     if (cJSON_IsArray(items)) {
-        /* The structured shape arrives and is counted here; rendering it as a
-         * scrollable label column is SLATE-007's deliverable.
-         */
-        ESP_LOGI(TAG, "SLATE_LEDGER items_received id=%s blocks=%d", widget_id,
-                 cJSON_GetArraySize(items));
+        slate_doc_view_set_items(widget, items);
     }
 
     bsp_display_unlock();
