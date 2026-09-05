@@ -84,12 +84,17 @@ detect_port() {
 
 # Пише лог, поки ти щось робиш руками. Єдина причина, чому запис узагалі тут:
 # він має збігтися в часі з твоїми дотиками.
+#
+# --no-reset обов'язковий. Без нього приєднання монітора перезавантажує пристрій
+# рівно в ту мить, коли скрипт каже починати тикати — це виглядає як падіння від
+# дотику, з'їдає перші секунди запису на завантаження, і зробило б доказ
+# перезавантаження нечитабельним, бо незрозуміло, хто саме перезавантажив.
 capture() {
     local secs="$1" outfile="$2" port
     port="$(detect_port)" || return 1
     # shellcheck disable=SC1090
     ( . "$IDF_EXPORT" >/dev/null 2>&1 && cd "$FIRMWARE_DIR" \
-        && idf.py -p "$port" monitor > "$outfile" 2>&1 ) &
+        && idf.py -p "$port" monitor --no-reset > "$outfile" 2>&1 ) &
     local pid=$! i=0
     while [ "$i" -lt "$secs" ]; do sleep 1; i=$((i+1)); printf '\r%s   пишу лог %ds/%ds%s' "$C_DIM" "$i" "$secs" "$C_OFF"; done
     printf '\r%s   готово (%ds)          %s\n' "$C_DIM" "$secs" "$C_OFF"

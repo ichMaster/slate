@@ -24,7 +24,10 @@
         style_flex_main_place="start"
         style_flex_cross_place="center">
 
-    <lv_label name="title" text="Slate M0"/>
+    <!-- Стоковий шрифт LVGL — 14 px, що на 1280x720 нечитабельно дрібно.
+         24 px — заголовок "трохи більший за текст", як просить брифінг, і все
+         ще стоковий шрифт без жодного оформлення. -->
+    <lv_label name="title" text="Slate M0" style_text_font="lv_font_montserrat_24"/>
 
     <lv_obj name="counter_row"
             width="100%" height="content"

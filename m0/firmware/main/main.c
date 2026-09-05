@@ -72,6 +72,13 @@ static void draw_message_state(const char *message)
 
     lv_obj_t *label = lv_label_create(screen);
     lv_label_set_text(label, message);
+    /* Стоковий шрифт LVGL — 14 px, а панель 1280x720 на п'яти дюймах: напис
+     * виходить заввишки близько двох міліметрів і на дошці M0 так не виглядає.
+     * 24 px — це все ще стоковий шрифт і жодного оформлення, просто читабельно
+     * у масштабі цього екрана. Справжня типографіка приходить із токенами на
+     * v1.3.
+     */
+    lv_obj_set_style_text_font(label, &lv_font_montserrat_24, LV_PART_MAIN);
     lv_obj_center(label);
 
     attach_touch_logging(screen);
