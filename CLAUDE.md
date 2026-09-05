@@ -33,8 +33,46 @@ action registry, the contract shared by all three consumers), `firmware/` (ESP-I
 Read the vision spec before writing anything. It is the authority on architecture, protocol, and
 build order; this file only summarises the parts that are easy to violate by accident.
 
-**When build, flash, validate, or test commands come into existence, record them here** — that is
-what future sessions will look for first.
+## Commands
+
+`v0.1` is released and running. These exist now — use them rather than reconstructing them.
+
+```bash
+./tools/versions          # which of repo / server / device is behind
+./tools/deploy            # sync → remote pytest → restart on green
+./tools/deploy --check    # is the server up, and is it this build
+./tools/m0-auto.sh        # everything machine-checkable, unattended
+./tools/m0-hands-on.sh    # only what a person must confirm by eye and finger
+```
+
+**`./tools/versions` first, always.** Three places can disagree — the repository, the server, the
+device — and nothing else tells them apart. It prints all three and names what to run.
+
+**Deploy after every server change**, before asking anyone to test. The server runs on
+`192.168.1.197:8010` as `ich@ich-picobox` (`ssh slate-server`), never on the workstation: the Mac's
+endpoint filtering accepts an inbound LAN connection and destroys the socket before the first read,
+so it answers on `127.0.0.1` and is unreachable from the device. Port **8010**, not 8000 —
+`roboface_server` owns 8000 on that host, and any `pkill -f server.py` there would take it down.
+
+Firmware, from `m0/firmware/` after `. ~/esp/esp-idf/export.sh`:
+
+```bash
+idf.py build
+idf.py -p /dev/cu.usbmodem1101 flash
+idf.py -p /dev/cu.usbmodem1101 monitor --no-reset   # --no-reset or attaching reboots the device
+```
+
+Tests: `pytest` at the repo root (94, product only — `testpaths` keeps `codegen/` out), and
+`cd codegen && ../.venv/bin/python -m pytest tests` (546) for the tracking suite.
+
+**Versioning has two halves and only one is manual.** `VERSION` holds the release (`0.1.0`) and
+moves only at a release. Build identity — git short SHA, a `-dirty` suffix, a UTC timestamp — is
+derived, never hand-edited: "did the update land" is a question of identity, not order, and a
+hand-bumped counter lies about identity the moment someone forgets it. The firmware logs its
+identity every 15 s (not only at boot — reading it must not require the reboot you are trying to
+avoid), and the server reports `version` plus a content fingerprint at `/health`.
+
+
 
 ## What Slate is
 
