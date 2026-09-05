@@ -43,6 +43,22 @@ static lv_obj_t *s_page_root;
 
 /* -- the three firmware-drawn states --------------------------------------- */
 
+/* Touch logging belongs on **every** screen, not just the rendered page.
+ *
+ * lv_obj_clean() drops the callbacks along with the widgets, so each state has
+ * to re-attach them. Attaching only on the page meant touch was unobservable in
+ * exactly the situations where it most needs checking — the two states the
+ * device shows when the server is out of reach.
+ */
+static void log_touch_cb(lv_event_t *event);
+
+static void attach_touch_logging(lv_obj_t *screen)
+{
+    lv_obj_add_flag(screen, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_add_event_cb(screen, log_touch_cb, LV_EVENT_PRESSED, NULL);
+    lv_obj_add_event_cb(screen, log_touch_cb, LV_EVENT_RELEASED, NULL);
+}
+
 /* Everything the firmware can draw before a page arrives — and nothing else.
  * Three states is the whole UI budget of this milestone.
  */
@@ -57,6 +73,8 @@ static void draw_message_state(const char *message)
     lv_obj_t *label = lv_label_create(screen);
     lv_label_set_text(label, message);
     lv_obj_center(label);
+
+    attach_touch_logging(screen);
     bsp_display_unlock();
 }
 
@@ -131,8 +149,7 @@ static bool render_page(const char *xml)
             ESP_LOGE(TAG, "page has no increment_btn — the button will do nothing");
         }
 
-        lv_obj_add_flag(screen, LV_OBJ_FLAG_CLICKABLE);
-        lv_obj_add_event_cb(screen, log_touch_cb, LV_EVENT_PRESSED, NULL);
+        attach_touch_logging(screen);
     }
     bsp_display_unlock();
     return ok;
