@@ -63,7 +63,9 @@ CONFIG_LV_USE_OBJ_NAME=y
 # and both real faces arrive with the token layer at v1.3. 48 is the counter's
 # "~80 px" from the brief at the nearest stock size; 24 makes doc-view headings
 # "merely larger" without inventing a hierarchy.
+CONFIG_LV_FONT_MONTSERRAT_20=y
 CONFIG_LV_FONT_MONTSERRAT_24=y
+CONFIG_LV_FONT_MONTSERRAT_32=y
 CONFIG_LV_FONT_MONTSERRAT_48=y
 
 # SDIO до ESP32-C6 — піни саме Tab5, а не eval-плати P4.

@@ -60,13 +60,23 @@ static void add_block(lv_obj_t *container, const char *kind, const char *text, l
         lv_label_set_text(label, text);
     }
 
+    /* Розміри підняті після того, як екран виявився нечитабельним живою людиною
+     * в окулярах. Стоковий шрифт LVGL — 14 px, а панель п'ятидюймова з 1280x720:
+     * абзац виходив заввишки близько двох міліметрів. Це все ще стокові
+     * накреслення без жодної типографіки — справжня драбина розмірів приходить
+     * із токенами на v1.3.
+     */
+    lv_obj_set_style_text_font(label, &lv_font_montserrat_24, LV_PART_MAIN);
+
     if (kind_is(kind, "h1") || kind_is(kind, "h2") || kind_is(kind, "h3")) {
-        lv_obj_set_style_text_font(label, &lv_font_montserrat_24, LV_PART_MAIN);
-        lv_obj_set_style_pad_top(label, 8, LV_PART_MAIN);
+        lv_obj_set_style_text_font(label, &lv_font_montserrat_32, LV_PART_MAIN);
+        lv_obj_set_style_pad_top(label, 12, LV_PART_MAIN);
     } else if (kind_is(kind, "code")) {
         lv_obj_set_style_bg_color(label, lv_color_hex(CODE_BG_COLOR), LV_PART_MAIN);
         lv_obj_set_style_bg_opa(label, LV_OPA_COVER, LV_PART_MAIN);
-        lv_obj_set_style_pad_all(label, 6, LV_PART_MAIN);
+        lv_obj_set_style_pad_all(label, 8, LV_PART_MAIN);
+        /* Код на розмір менший за текст — щоб довгі рядки рідше обрізались. */
+        lv_obj_set_style_text_font(label, &lv_font_montserrat_20, LV_PART_MAIN);
         /* No wrapping for code: the brief says a strip, and folding a code line
          * mid-token reads worse than clipping it.
          */
@@ -96,7 +106,7 @@ void slate_doc_view_set_items(lv_obj_t *container, const cJSON *items)
     lv_obj_clean(container);
 
     lv_obj_set_flex_flow(container, LV_FLEX_FLOW_COLUMN);
-    lv_obj_set_style_pad_row(container, 6, LV_PART_MAIN);
+    lv_obj_set_style_pad_row(container, 10, LV_PART_MAIN);
     lv_obj_set_scroll_dir(container, LV_DIR_VER);
     /* A visible scrollbar, so scrollability reads without a gesture. */
     lv_obj_set_scrollbar_mode(container, LV_SCROLLBAR_MODE_ON);

@@ -78,7 +78,7 @@ static void draw_message_state(const char *message)
      * у масштабі цього екрана. Справжня типографіка приходить із токенами на
      * v1.3.
      */
-    lv_obj_set_style_text_font(label, &lv_font_montserrat_24, LV_PART_MAIN);
+    lv_obj_set_style_text_font(label, &lv_font_montserrat_32, LV_PART_MAIN);
     lv_obj_center(label);
 
     attach_touch_logging(screen);

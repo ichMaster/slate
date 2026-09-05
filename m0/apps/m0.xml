@@ -24,10 +24,10 @@
         style_flex_main_place="start"
         style_flex_cross_place="center">
 
-    <!-- Стоковий шрифт LVGL — 14 px, що на 1280x720 нечитабельно дрібно.
-         24 px — заголовок "трохи більший за текст", як просить брифінг, і все
-         ще стоковий шрифт без жодного оформлення. -->
-    <lv_label name="title" text="Slate M0" style_text_font="lv_font_montserrat_24"/>
+    <!-- Розміри підняті після живої перевірки: стоковий шрифт LVGL — 14 px, а
+         панель п'ятидюймова з 1280x720, тож текст виходив нечитабельним навіть
+         в окулярах. Це все ще стокові накреслення без типографіки. -->
+    <lv_label name="title" text="Slate M0" style_text_font="lv_font_montserrat_32"/>
 
     <lv_obj name="counter_row"
             width="100%" height="content"
@@ -39,11 +39,11 @@
             style_flex_cross_place="center">
       <lv_label name="count" text="0" style_text_font="lv_font_montserrat_48"/>
       <lv_button name="increment_btn" width="content" height="content">
-        <lv_label text="+1"/>
+        <lv_label text="+1" style_text_font="lv_font_montserrat_32"/>
       </lv_button>
     </lv_obj>
 
-    <lv_label name="clock" text="--:--:--"/>
+    <lv_label name="clock" text="--:--:--" style_text_font="lv_font_montserrat_32"/>
 
     <lv_obj name="doc"
             width="100%" height="55%"

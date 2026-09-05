@@ -52,6 +52,21 @@ void slate_xml_init(void)
 #if LV_USE_XML
     if (!s_initialised) {
         lv_xml_init();
+
+        /* Шрифти треба зареєструвати, інакше `style_text_font="..."` у XML
+         * мовчки не діє.
+         *
+         * lv_xml резолвить шрифти лише за іменем і лише серед зареєстрованих;
+         * незнайоме ім'я не є помилкою — атрибут просто ігнорується. Через це
+         * сторінка лишалася з 14-піксельним стоковим шрифтом, тоді як текст
+         * документа, де розмір ставиться з коду, збільшився нормально. Мовчазне
+         * ігнорування робить цю помилку майже невидимою.
+         */
+        lv_xml_register_font(NULL, "lv_font_montserrat_20", &lv_font_montserrat_20);
+        lv_xml_register_font(NULL, "lv_font_montserrat_24", &lv_font_montserrat_24);
+        lv_xml_register_font(NULL, "lv_font_montserrat_32", &lv_font_montserrat_32);
+        lv_xml_register_font(NULL, "lv_font_montserrat_48", &lv_font_montserrat_48);
+
         s_initialised = true;
     }
 #endif
