@@ -59,6 +59,8 @@ Transport: WS for the live channel (JSON, one object per frame), HTTP GET for pa
 - **Streaming.** `log-view` and `chat-view` stream by tail re-send — the server re-sends the growing tail with set semantics. There is no append operation; the property set stays closed.
 - **Audio (v6.3, direction pinned).** Binary PCM16 frames beside the JSON on the same WS, session- and stream-tagged, start/stop control in JSON; RoboFace's wire is the reference. v1.2's frame dispatcher reserves binary frames so this is never precluded.
 
+- **The v0.1 subset.** The walking skeleton speaks a strict *subset* of the above, never a variant: `subscribe`, `data` and `event` only, over a plain `GET /ws` with **no `proto`/`screen` params**. There is no session registry (one implicit session), no `ETag` on the page, and no reconnection. Unknown message types and keys are already ignored, because forward compatibility is cheaper to build than to retrofit. The full connect URL and session binding arrive at v1.2, cache honesty at v1.1.
+
 Message schemas with examples: [slate-vision.md §4](slate-vision.md).
 
 ## The shell
@@ -114,6 +116,8 @@ slate/
                    + the design canvas exports (visual source of truth)
   components/      component definitions + action registry + manifest (the contract)
   firmware/        ESP-IDF project, Tab5 first (from v1.1; v0.1's code is quarry)
+  m0/              v0.1's walking skeleton — quarry, not foundation. Its firmware
+                   and server are thrown away; firmware/ and server/ start at v1.1
   server/          Python asyncio reference server + application handlers + companion daemon
   validator/       host LVGL build + slate-validate CLI (v5.1)
   apps/            the page store the reference server serves

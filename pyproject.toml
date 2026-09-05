@@ -1,0 +1,23 @@
+# Repo-root tooling config for the product tree.
+#
+# `codegen/` deliberately keeps its own pyproject.toml and its own rootdir; the
+# two suites are separate and must stay separately runnable.
+#
+# The pytest section lands with SLATE-005 alongside the test scaffolding; mypy
+# and ruff land here at SLATE-003 because the server's validation gate needs
+# them from its first commit.
+
+[tool.mypy]
+strict = true
+python_version = "3.12"
+warn_unreachable = true
+warn_unused_ignores = true
+# codegen/ is checked under its own config, with its own settings.
+exclude = "^codegen/"
+
+[tool.ruff]
+line-length = 100
+extend-exclude = ["codegen", ".venv"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
