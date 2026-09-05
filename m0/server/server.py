@@ -28,6 +28,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Final
 
+from markdown import Block, parse_markdown
 from websockets.asyncio.server import ServerConnection, serve
 from websockets.datastructures import Headers
 from websockets.http11 import Request, Response
@@ -37,6 +38,9 @@ log = logging.getLogger("slate.m0")
 #: Where the page XML lives, next to this file's parent.
 PAGE_PATH: Final = "/apps/m0.xml"
 APPS_DIR: Final = Path(__file__).resolve().parent.parent / "apps"
+
+#: The one hard-coded document `doc-view` v0 renders.
+DOC_PATH: Final = Path(__file__).resolve().parent / "doc.md"
 
 #: The interval of the unsolicited clock push. One second, per ROADMAP §v0.1.
 CLOCK_INTERVAL_S: Final = 1.0
@@ -108,10 +112,16 @@ class M0Server:
         clock: Clock | None = None,
         counter_start: int = 0,
         clock_interval_s: float = CLOCK_INTERVAL_S,
+        doc_source: str | None = None,
     ) -> None:
         self.counter = Counter(counter_start)
         self.clock: Clock = clock if clock is not None else datetime.now
         self.clock_interval_s = clock_interval_s
+        #: Parsed once at startup — the document is hard-coded and never changes,
+        #: so re-parsing it per subscribe would only add latency.
+        self.doc: list[Block] = parse_markdown(
+            doc_source if doc_source is not None else DOC_PATH.read_text(encoding="utf-8")
+        )
         #: Live connections, each mapped to the session_id it last identified as.
         self._connections: dict[ServerConnection, str] = {}
         self._clock_task: asyncio.Task[None] | None = None
@@ -123,12 +133,18 @@ class M0Server:
     def widget_update(self, widget_id: str) -> dict[str, Any] | None:
         """The current value of one widget, or ``None`` if this page has no such id.
 
-        SLATE-004 extends this with ``doc``; v0.1 knows nothing else.
+        Three widgets, two shapes: ``count`` and ``clock`` are scalar ``text``,
+        ``doc`` is structured ``items``. Between them the trimmed wire exercises
+        both update shapes, which is the reason ``doc-view`` v0 is in M0 at all.
         """
         if widget_id == "count":
             return make_update("count", text=str(self.counter.value))
         if widget_id == "clock":
             return make_update("clock", text=format_clock(self.clock()))
+        if widget_id == "doc":
+            # The whole document in one update. There is no append operation —
+            # the property set is closed, and `items` has set semantics.
+            return make_update("doc", items=self.doc)
         return None
 
     # -- the three message types ------------------------------------------

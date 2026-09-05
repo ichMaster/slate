@@ -11,6 +11,7 @@ must not appear here.
 
 from __future__ import annotations
 
+from markdown import BLOCK_KINDS
 from server import M0Server, make_data, make_update
 
 #: The full closed dynamic-property set (ARCHITECTURE.md §Contracts).
@@ -189,6 +190,84 @@ class TestForwardCompatibility:
         )
         assert reply is not None
         assert set(reply) == {"type", "session_id", "updates"}
+
+
+class TestDocViewBlockKinds:
+    """`doc-view` block kinds are a seam (ARCHITECTURE.md §Contracts).
+
+    Adding a kind is a deliberate contract change and must fail here first. The
+    `link` key is out of scope until v2.4 and must not appear early.
+    """
+
+    def test_the_block_kind_set_is_exactly_the_contracted_eight(self) -> None:
+        assert set(BLOCK_KINDS) == {
+            "h1",
+            "h2",
+            "h3",
+            "p",
+            "bullet",
+            "code",
+            "quote",
+            "divider",
+        }
+
+    def test_the_served_document_emits_only_contracted_kinds(self, m0: M0Server) -> None:
+        assert {block["kind"] for block in m0.doc} <= set(BLOCK_KINDS)
+
+    def test_no_block_carries_a_link_key_at_v0_1(self, m0: M0Server) -> None:
+        assert all("link" not in block for block in m0.doc)
+
+    def test_every_block_is_exactly_kind_and_text(self, m0: M0Server) -> None:
+        assert all(set(block) == {"kind", "text"} for block in m0.doc)
+
+
+class TestItemsUpdateShape:
+    """The structured half of the wire: one `items` update, not many."""
+
+    def test_subscribing_to_doc_yields_a_single_items_update(self, m0: M0Server) -> None:
+        reply = m0.handle(
+            {"type": "subscribe", "session_id": "s", "req_id": 1, "widgets": ["doc"]}
+        )
+        assert reply is not None
+        assert len(reply["updates"]) == 1
+        assert set(reply["updates"][0]) == {"id", "items"}
+
+    def test_the_whole_document_travels_in_one_frame(self, m0: M0Server) -> None:
+        reply = m0.handle(
+            {"type": "subscribe", "session_id": "s", "req_id": 1, "widgets": ["doc"]}
+        )
+        assert reply is not None
+        assert reply["updates"][0]["items"] == m0.doc
+
+    def test_items_is_within_the_closed_dynamic_property_set(self, m0: M0Server) -> None:
+        reply = m0.handle(
+            {"type": "subscribe", "session_id": "s", "req_id": 1, "widgets": ["doc"]}
+        )
+        assert reply is not None
+        used = {key for key in reply["updates"][0] if key != "id"}
+        assert used <= V0_1_PROPERTIES <= DYNAMIC_PROPERTIES
+
+    def test_both_update_shapes_ride_the_same_data_frame(self, m0: M0Server) -> None:
+        # Scalar `text` and structured `items` in one response is the point of
+        # putting doc-view v0 in the walking skeleton at all.
+        reply = m0.handle(
+            {
+                "type": "subscribe",
+                "session_id": "s",
+                "req_id": 1,
+                "widgets": ["count", "doc"],
+            }
+        )
+        assert reply is not None
+        shapes = [set(u) - {"id"} for u in reply["updates"]]
+        assert shapes == [{"text"}, {"items"}]
+
+    def test_the_document_is_substantial_enough_to_prove_scrolling(self, m0: M0Server) -> None:
+        # The roadmap measures render time and scroll feel against ~50 blocks.
+        assert len(m0.doc) >= 50
+
+    def test_the_document_carries_the_cyrillic_line(self, m0: M0Server) -> None:
+        assert any("українською" in block["text"] for block in m0.doc)
 
 
 class TestSubsetDiscipline:

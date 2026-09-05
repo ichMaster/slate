@@ -92,7 +92,7 @@ The stable seams. Changing one must change its contract test (§Testing and CI).
 - **Token/role names:** the colour tokens, five type roles, three spacing tokens; the validator whitelists them; raw hex is warn-flagged, raw pixels are an error.
 - **Session binding:** device-minted `session_id`, lazy server creation, active-only re-subscribe.
 - **Cache honesty:** base-path caching + `If-None-Match` revalidation, for pages and assets alike.
-- **`doc-view` block kinds:** `h1 h2 h3 p bullet code quote divider` (+ `link` key); `chat-view` items `{role, text, pending?}`.
+- **`doc-view` block kinds:** `h1 h2 h3 p bullet code quote divider` (+ `link` key); `chat-view` items `{role, text, pending?}`. The eight kinds are pinned by contract test from v0.1; the `link` key arrives with the Markdown browser at v2.4, and inline links are refused outright.
 
 ## Data model
 
