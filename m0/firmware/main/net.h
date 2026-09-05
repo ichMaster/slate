@@ -21,6 +21,18 @@ extern "C" {
  */
 typedef void (*slate_update_cb_t)(const char *widget_id, const char *json_update);
 
+/* Power the ESP32-C6 co-processor.
+ *
+ * Must be called **before anything touches the SDIO link**, which in practice
+ * means first thing in app_main: esp_hosted starts probing on its own within a
+ * couple of seconds of boot, and if the C6 is still unpowered it retries and
+ * fails forever with `sdmmc_init_ocr: send_op_cond returned 0x107`. That reads
+ * like a driver fault and is not one.
+ *
+ * Needs the I2C bus (bsp_i2c_init) because the enable line is on an IO expander.
+ */
+bool slate_wifi_power_on(void);
+
 /* Join the network configured in Kconfig. Blocks until associated or timed out. */
 bool slate_wifi_connect(void);
 

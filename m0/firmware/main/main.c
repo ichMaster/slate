@@ -147,9 +147,37 @@ void app_main(void)
      * boards that already work.
      */
     ESP_ERROR_CHECK(bsp_i2c_init());
+
+    /* Before anything else that takes time: esp_hosted begins probing the SDIO
+     * link to the C6 within a couple of seconds of boot, entirely on its own
+     * schedule, and an unpowered C6 means it retries and fails forever.
+     */
+    slate_wifi_power_on();
+
     const slate_panel_revision_t panel = slate_panel_probe();
 
-    lv_display_t *display = bsp_display_start();
+    /* Not bsp_display_start(): its defaults put the draw buffers in internal
+     * DMA memory, and software rotation needs a further full-screen buffer on
+     * top. Once esp_hosted is linked in for WiFi there is no longer enough
+     * internal RAM for that, and the display fails to start with
+     * "Not enough memory for LVGL buffer (rotation buffer) allocation!".
+     *
+     * The Tab5 has 32 MB of PSRAM, so the buffers go there instead. The panel is
+     * natively portrait (720x1280) and Slate is landscape, so the rotation is
+     * not optional — the M0 board is specified at 1280x720.
+     */
+    bsp_display_cfg_t display_cfg = {
+        .lvgl_port_cfg = ESP_LVGL_PORT_INIT_CONFIG(),
+        .buffer_size = BSP_LCD_H_RES * 100,
+        .double_buffer = false,
+        .flags =
+            {
+                .buff_dma = false,
+                .buff_spiram = true,
+                .sw_rotate = true,
+            },
+    };
+    lv_display_t *display = bsp_display_start_with_config(&display_cfg);
     if (display == NULL) {
         ESP_LOGE(TAG, "display failed to start");
         return;

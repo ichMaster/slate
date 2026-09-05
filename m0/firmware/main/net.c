@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "bsp/m5stack_tab5.h"
 #include "cJSON.h"
 #include "esp_event.h"
 #include "esp_http_client.h"
@@ -65,6 +66,25 @@ static void wifi_event_handler(void *arg, esp_event_base_t base, int32_t id, voi
         s_retries = 0;
         xEventGroupSetBits(s_wifi_events, WIFI_CONNECTED_BIT);
     }
+}
+
+bool slate_wifi_power_on(void)
+{
+    /* Same shape as the touch controller needing the LCD rail: on this board the
+     * IO expanders gate more than their names suggest, and a peripheral that is
+     * merely unpowered fails as though its driver were broken.
+     */
+    const esp_err_t ret = bsp_feature_enable(BSP_FEATURE_WIFI, true);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "could not power the C6: %s", esp_err_to_name(ret));
+        return false;
+    }
+    /* The C6 needs a moment to boot its hosted-slave firmware before the SDIO
+     * link is probed.
+     */
+    vTaskDelay(pdMS_TO_TICKS(500));
+    ESP_LOGI(TAG, "C6 powered");
+    return true;
 }
 
 bool slate_wifi_connect(void)
