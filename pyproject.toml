@@ -21,3 +21,16 @@ extend-exclude = ["codegen", ".venv"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
+
+[tool.pytest.ini_options]
+# Relative to this rootdir. Without it a bare `pytest` here collects recursively
+# from the cwd and sweeps codegen/'s 546-test suite into the product run — the
+# same failure codegen/pyproject.toml documents from the other direction. The two
+# suites are separate and stay separately runnable:
+#     pytest                                          -> the product suite
+#     cd codegen && ../.venv/bin/python -m pytest tests -> the tracking suite
+testpaths = ["tests"]
+asyncio_mode = "auto"
+# Each test gets its own event loop, so a server left running in one can never
+# leak into the next.
+asyncio_default_fixture_loop_scope = "function"
