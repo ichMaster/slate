@@ -41,6 +41,12 @@ generous but unconsidered spacing.
 
 Element by element:
 
+**Sizes as built** (stock Montserrat; see
+[ui-implementation.md §6](ui-implementation.md) for the reasoning): count 48 px ·
+title, clock, `+1` and the three firmware states 32 px · document headings 32 px,
+body 24 px, code 20 px. The stock 14 px default proved unreadable on a five-inch
+panel — about two millimetres tall — so "plain" here means legible, not tiny.
+
 1. **Title** — `Slate M0`, a plain label, slightly larger than body. Static.
 2. **Counter value** — `42`, large plain text. This number is owned by the
    server; the device only displays what it is told.
@@ -49,7 +55,7 @@ Element by element:
    when the server's update returns.
 4. **Clock** — `19:04:33`, plain label, updated once a second by unsolicited
    server push.
-5. **Document region** — a scrollable panel (~55 % of screen height, inset,
+5. **Document region** — a scrollable panel (**68 %** of screen height, inset,
    white ground) rendering a server-parsed Markdown file as a column of
    plain labels: headings simply larger, bullets prefixed with `•`, code
    lines on a light-grey strip. No links, no images, no styling beyond that.

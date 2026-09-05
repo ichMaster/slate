@@ -426,10 +426,42 @@ Board set `Slate M0 Prototype.html`; the standalone brief is
 font, `#e0e0e0` ground, no tokens, no components, no status bar, no chrome.
 Build it exactly that ugly:
 
-- title label · `42` at ~80 px · a stock `+1` button with a visible pressed
-  state · a 1 Hz clock label · a white inset panel, ~55 % of screen height,
-  holding server-parsed blocks as a plain label column (headings merely larger,
-  bullets prefixed `•`, code on a `#ebebeb` strip)
+- title label · the count · a stock `+1` button with a visible pressed state ·
+  a 1 Hz clock label · a white inset panel holding server-parsed blocks as a
+  plain label column (headings merely larger, bullets prefixed `•`, code on a
+  `#ebebeb` strip)
+
+**Sizes, as built and checked on the panel** (stock Montserrat throughout — M0
+does no font work, and the real type ladder arrives with the tokens at M3):
+
+| Element | Size |
+|---|---|
+| count | 48 px |
+| title · clock · `+1` · the three firmware states | 32 px |
+| document headings (`h1`–`h3`) | 32 px |
+| document body, bullets, quotes | 24 px |
+| document code | 20 px |
+| document panel height | **68 %** of screen height |
+
+Two figures here replace earlier guesses and the reasons matter. The count is
+**48 px, not the ~80 px first written**: 48 is the largest stock Montserrat, and
+compiling a custom face would contradict M0's own rule. Treat ~80 px as a
+requirement on the `stat-value` role at M3 instead. And the panel is **68 %, not
+55 %**: the 55 % figure assumed the 14 px stock default, and once body text grew
+to a legible 24 px only a few paragraphs fit. 720 px less the title, counter row,
+clock and padding is about 210 px of chrome, so 68 % is simply what remains.
+
+Nothing above was legible at the stock 14 px default: on a five-inch 1280×720
+panel that is roughly two millimetres tall, and a person wearing glasses could
+not read it. Legible is not the same as designed — this is still stock faces,
+stock theme, no styling.
+
+**Fonts referenced from page XML must be registered** with
+`lv_xml_register_font()` first. `lv_xml` resolves `style_text_font` by name among
+registered fonts only, and an unregistered name is **not an error** — the
+attribute is silently ignored. Sizes set from C therefore take effect while the
+same sizes in XML appear to do nothing, which reads like a stale deploy rather
+than a missing registration.
 - the Ukrainian line renders as **tofu** — the default font is Latin-only, and
   the board draws the boxes on purpose. Do not fix this in M0; real fonts
   arrive with M3.
