@@ -94,25 +94,42 @@ bool slate_wifi_connect(void)
         return false;
     }
 
+    /* Nothing here uses ESP_ERROR_CHECK.
+     *
+     * A missing or silent C6 makes esp_wifi_init() fail, and ESP_ERROR_CHECK
+     * turns that into abort() — a reboot loop, which is precisely the failure
+     * the "server unreachable" state exists to replace. The device must degrade
+     * to a legible screen, not die: an unreachable server is a normal condition
+     * on a trusted-network terminal, not an exceptional one.
+     */
+#define TRY(call)                                                                                  \
+    do {                                                                                           \
+        const esp_err_t _err = (call);                                                             \
+        if (_err != ESP_OK) {                                                                      \
+            ESP_LOGE(TAG, "%s failed: %s", #call, esp_err_to_name(_err));                          \
+            return false;                                                                          \
+        }                                                                                          \
+    } while (0)
+
     esp_err_t ret = nvs_flash_init();
     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
-        ESP_ERROR_CHECK(nvs_flash_erase());
+        TRY(nvs_flash_erase());
         ret = nvs_flash_init();
     }
-    ESP_ERROR_CHECK(ret);
+    TRY(ret);
 
     s_wifi_events = xEventGroupCreate();
-    ESP_ERROR_CHECK(esp_netif_init());
-    ESP_ERROR_CHECK(esp_event_loop_create_default());
+    TRY(esp_netif_init());
+    TRY(esp_event_loop_create_default());
     esp_netif_create_default_wifi_sta();
 
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
-    ESP_ERROR_CHECK(esp_wifi_init(&cfg));
+    TRY(esp_wifi_init(&cfg));
 
-    ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT, ESP_EVENT_ANY_ID,
-                                                        wifi_event_handler, NULL, NULL));
-    ESP_ERROR_CHECK(esp_event_handler_instance_register(IP_EVENT, IP_EVENT_STA_GOT_IP,
-                                                        wifi_event_handler, NULL, NULL));
+    TRY(esp_event_handler_instance_register(WIFI_EVENT, ESP_EVENT_ANY_ID, wifi_event_handler, NULL,
+                                            NULL));
+    TRY(esp_event_handler_instance_register(IP_EVENT, IP_EVENT_STA_GOT_IP, wifi_event_handler, NULL,
+                                            NULL));
 
     wifi_config_t wifi_config = {0};
     strncpy((char *)wifi_config.sta.ssid, CONFIG_SLATE_WIFI_SSID,
@@ -120,9 +137,10 @@ bool slate_wifi_connect(void)
     strncpy((char *)wifi_config.sta.password, CONFIG_SLATE_WIFI_PASSWORD,
             sizeof(wifi_config.sta.password) - 1);
 
-    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
-    ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
-    ESP_ERROR_CHECK(esp_wifi_start());
+    TRY(esp_wifi_set_mode(WIFI_MODE_STA));
+    TRY(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
+    TRY(esp_wifi_start());
+#undef TRY
 
     ESP_LOGI(TAG, "joining \"%s\"", CONFIG_SLATE_WIFI_SSID);
     EventBits_t bits = xEventGroupWaitBits(s_wifi_events, WIFI_CONNECTED_BIT | WIFI_FAILED_BIT,
