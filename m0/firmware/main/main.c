@@ -17,6 +17,7 @@
 #include "esp_timer.h"
 #include "lvgl.h"
 #include "panel_probe.h"
+#include "xml_poc.h"
 
 static const char *TAG = "slate.m0";
 
@@ -112,6 +113,15 @@ void app_main(void)
     lv_display_set_rotation(display, LV_DISPLAY_ROTATION_90);
     draw_connecting_state();
     bsp_display_unlock();
+
+    /* The go/no-go. Run against a real screen rather than a detached parent, so
+     * a page that parses but cannot lay out still counts as a failure.
+     */
+    bsp_display_lock(0);
+    lv_obj_clean(lv_screen_active());
+    const slate_xml_verdict_t xml = slate_xml_poc_run(lv_screen_active(), "m0");
+    bsp_display_unlock();
+    slate_xml_log_verdict(&xml);
 
     ESP_LOGI(TAG, "display %dx%d, touch %s", (int)lv_display_get_horizontal_resolution(display),
              (int)lv_display_get_vertical_resolution(display),

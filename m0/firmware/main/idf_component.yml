@@ -14,3 +14,18 @@ dependencies:
 
   espressif/m5stack_tab5:
     version: "^1.3.0"
+
+  ## LVGL is pinned to 9.4.0 **because of the XML module**, and the pin is
+  ## load-bearing rather than conservative.
+  ##
+  ## LVGL shipped `lv_xml` in src/others/xml/ at 9.3.0 and 9.4.0, and **removed
+  ## it in 9.5.0** — verified against the upstream trees, not inferred: 9.5.0
+  ## contains no lv_xml source anywhere, only ThorVG's unrelated SVG parser.
+  ## The BSP pulls esp_lvgl_port ^2, which resolves LVGL to 9.5.0 by default and
+  ## would silently leave the platform with no XML renderer at all.
+  ##
+  ## v0.1 exists to answer whether lv_xml runs on the ESP32-P4, so the pin is
+  ## what makes the question askable. See the SLATE-008 ledger for the verdict
+  ## and its consequence for the component machinery at v1.3.
+  lvgl/lvgl:
+    version: "~9.4.0"

@@ -43,3 +43,14 @@ CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG=y
 # Flash: 16 MB on the Tab5.
 CONFIG_ESPTOOLPY_FLASHSIZE_16MB=y
 CONFIG_PARTITION_TABLE_SINGLE_APP_LARGE=y
+
+# The whole reason v0.1 exists: LVGL's runtime XML loader, and with it the
+# vendored expat. LVGL carried this at 9.3/9.4 and removed it at 9.5, which is
+# why main/idf_component.yml pins 9.4.0.
+CONFIG_LV_USE_XML=y
+
+# Required by LV_USE_XML ("LV_USE_OBJ_NAME is required to use XMLs"), and wanted
+# on its own account: lv_obj_find_by_name() is exactly the lookup the applicator
+# needs to turn a data update's `id` into a widget. The two halves of Slate's
+# page model — named elements in XML, targeted updates by name — rest on it.
+CONFIG_LV_USE_OBJ_NAME=y
