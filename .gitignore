@@ -238,3 +238,6 @@ dependencies.lock
 # Per-desk firmware config: WiFi credentials and the server address. The repo is
 # public; ARCHITECTURE.md §Security allows these in firmware but not in git.
 sdkconfig.defaults.local
+
+# Test-run evidence: device logs and pytest output, produced per run.
+tools/evidence/
