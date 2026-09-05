@@ -1,0 +1,124 @@
+#!/usr/bin/env bash
+# Slate — що де запущено, і чи це те саме.
+#
+#   ./tools/versions
+#
+# Відповідає на одне питання: чи доїхало те, що я щойно зібрав, на сервер і на
+# пристрій. Це питання ІДЕНТИЧНОСТІ, а не порядку — тому нічого не нумерується
+# вручну. Версія релізу береться з VERSION і піднімається лише при релізі;
+# ідентичність збірки виводиться сама з git та вмісту файлів, тож її неможливо
+# забути оновити.
+#
+# Три сторони, які мають збігатися:
+#   репозиторій  — що зараз у дереві
+#   сервер       — що віддає /health на 192.168.1.197
+#   пристрій     — що каже прошивка в лозі завантаження
+
+set -uo pipefail
+
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$REPO_ROOT" || exit 1
+
+ADDR="${SLATE_ADDR:-192.168.1.197}"
+PORT="${SLATE_PORT:-8010}"
+: "${IDF_EXPORT:=$HOME/esp/esp-idf/export.sh}"
+
+C_OK=$'\033[0;32m'; C_BAD=$'\033[0;31m'; C_DIM=$'\033[0;90m'; C_HEAD=$'\033[1;36m'; C_OFF=$'\033[0m'
+row() { printf '  %-12s %s\n' "$1" "$2"; }
+
+VERSION="$(cat VERSION 2>/dev/null || echo '?')"
+SHA="$(git rev-parse --short HEAD 2>/dev/null || echo nogit)"
+[ -n "$(git status --porcelain 2>/dev/null)" ] && SHA="$SHA-dirty"
+
+# Той самий відбиток, що рахує сервер: по вмісту того, що він віддає.
+FINGERPRINT="$("$REPO_ROOT/.venv/bin/python" - <<'PY' 2>/dev/null
+import hashlib, pathlib
+d = hashlib.sha256()
+for p in ("m0/server/server.py", "m0/server/doc.md", "m0/apps/m0.xml"):
+    f = pathlib.Path(p)
+    d.update(f.read_bytes() if f.exists() else b"<missing>")
+print(d.hexdigest()[:12])
+PY
+)"
+
+printf '\n%sSlate — версії%s\n\n' "$C_HEAD" "$C_OFF"
+
+printf '%sРЕПОЗИТОРІЙ%s\n' "$C_HEAD" "$C_OFF"
+row "реліз" "$VERSION"
+row "збірка" "$SHA"
+row "відбиток" "$FINGERPRINT"
+
+printf '\n%sСЕРВЕР%s  (%s:%s)\n' "$C_HEAD" "$C_OFF" "$ADDR" "$PORT"
+HEALTH="$(curl -s -m 6 "http://$ADDR:$PORT/health" 2>/dev/null)"
+if [ -z "$HEALTH" ]; then
+    printf '  %sне відповідає%s\n' "$C_BAD" "$C_OFF"
+    SRV_MATCH=0
+else
+    SRV_VER="$(printf '%s' "$HEALTH" | sed -n 's/.*"version": *"\([^"]*\)".*/\1/p')"
+    SRV_FP="$(printf '%s' "$HEALTH" | sed -n 's/.*"build": *"\([^"]*\)".*/\1/p')"
+    row "реліз" "${SRV_VER:-?}"
+    row "відбиток" "${SRV_FP:-?}"
+    if [ "$SRV_FP" = "$FINGERPRINT" ]; then
+        printf '  %s✓ збігається з репозиторієм%s\n' "$C_OK" "$C_OFF"; SRV_MATCH=1
+    else
+        printf '  %s✗ РОЗІЙШЛОСЯ — потрібен ./tools/deploy%s\n' "$C_BAD" "$C_OFF"; SRV_MATCH=0
+    fi
+fi
+
+printf '\n%sПРИСТРІЙ%s\n' "$C_HEAD" "$C_OFF"
+PORT_DEV="$(ls /dev 2>/dev/null | grep -E '^cu\.usbmodem' | head -1)"
+if [ -z "$PORT_DEV" ]; then
+    printf '  %sне під%sє' "$C_DIM" "$C_OFF"; printf 'днаний по USB\n'
+    DEV_MATCH=0
+else
+    LOG="$(mktemp)"
+    # --no-reset: інакше читання версії саме перезавантажує пристрій, тобто
+    # перевірка ламала б те, що перевіряє.
+    ( . "$IDF_EXPORT" >/dev/null 2>&1 && cd m0/firmware \
+        && idf.py -p "/dev/$PORT_DEV" monitor --no-reset > "$LOG" 2>&1 ) &
+    MON=$!
+    # Прошивка повторює рядок раз на 15 с, тож чекаємо трохи довше — але
+    # виходимо одразу, щойно він з'явився. Якщо пристрій щойно стартував, це
+    # секунда, а не двадцять.
+    LINE=""
+    for _ in $(seq 1 20); do
+        sleep 1
+        LINE="$(sed 's/\x1b\[[0-9;]*m//g' "$LOG" 2>/dev/null | grep -aoE 'firmware_version=[^ ]+ firmware_build=[^ ]+ built=[^ ]+' | tail -1)"
+        [ -n "$LINE" ] && break
+        printf '\r%s  читаю пристрій...%s' "$C_DIM" "$C_OFF"
+    done
+    printf '\r                       \r'
+    pkill -f idf_monitor 2>/dev/null; kill "$MON" 2>/dev/null; wait "$MON" 2>/dev/null
+    rm -f "$LOG"
+
+    if [ -z "$LINE" ]; then
+        printf '  %sмовчить — перезавантаж пристрій, рядок версії йде при старті%s\n' "$C_DIM" "$C_OFF"
+        DEV_MATCH=0
+    else
+        DEV_VER="$(printf '%s' "$LINE" | sed -n 's/.*firmware_version=\([^ ]*\).*/\1/p')"
+        DEV_BUILD="$(printf '%s' "$LINE" | sed -n 's/.*firmware_build=\([^ ]*\).*/\1/p')"
+        DEV_BUILT="$(printf '%s' "$LINE" | sed -n 's/.*built=\([^ ]*\).*/\1/p')"
+        row "реліз" "$DEV_VER"
+        row "збірка" "$DEV_BUILD"
+        row "зібрано" "$DEV_BUILT"
+        if [ "$DEV_BUILD" = "$SHA" ]; then
+            printf '  %s✓ збігається з репозиторієм%s\n' "$C_OK" "$C_OFF"; DEV_MATCH=1
+        else
+            printf '  %s✗ РОЗІЙШЛОСЯ — потрібен idf.py flash%s\n' "$C_BAD" "$C_OFF"; DEV_MATCH=0
+        fi
+    fi
+fi
+
+printf '\n'
+case "$SHA" in
+    *-dirty)
+        printf '  %sУ дереві незакомічені зміни: збірку -dirty не відтворити з жодного%s\n' "$C_DIM" "$C_OFF"
+        printf '  %sкоміту, тож збіг із пристроєм тут нічого не доводить.%s\n' "$C_DIM" "$C_OFF" ;;
+esac
+
+if [ "${SRV_MATCH:-0}" = "1" ] && [ "${DEV_MATCH:-0}" = "1" ]; then
+    printf '%s  Усе синхронно.%s\n\n' "$C_OK" "$C_OFF"
+    exit 0
+fi
+printf '%s  Є розбіжності — див. вище.%s\n\n' "$C_BAD" "$C_OFF"
+exit 1

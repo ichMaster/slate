@@ -118,6 +118,9 @@ if ! rsync -az --delete \
     exit 1
 fi
 rsync -az --delete "$REPO_ROOT/tests/" "$HOST:$REMOTE_DIR/tests/" 2>/dev/null
+# VERSION їде окремо: /health звітує саме її, і без неї сервер повідомляв би
+# "unknown" замість того, що ми щойно випустили.
+rsync -az "$REPO_ROOT/VERSION" "$HOST:$REMOTE_DIR/" 2>/dev/null
 rsync -az "$REPO_ROOT/tools/fake_device.py" "$HOST:$REMOTE_DIR/tools/" 2>/dev/null
 ok "код синхронізовано в $REMOTE_DIR"
 

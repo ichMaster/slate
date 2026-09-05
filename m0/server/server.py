@@ -49,6 +49,29 @@ DOC_PATH: Final = Path(__file__).resolve().parent / "doc.md"
 #: while assuming the second is how a stale server goes unnoticed for hours.
 HEALTH_PATH: Final = "/health"
 
+#: Where VERSION might be. Two places on purpose: the repository root when run
+#: from a checkout, and one level above the server directory once deployed, where
+#: the tree is flattened to <remote>/server/ and <remote>/apps/.
+VERSION_PATHS: Final = (
+    Path(__file__).resolve().parent.parent.parent / "VERSION",
+    Path(__file__).resolve().parent.parent / "VERSION",
+)
+
+
+def release_version() -> str:
+    """The released version, reported by /health.
+
+    A deploy is checked against what was actually released, not against the fact
+    that a restart returned zero — a restart that leaves the old process holding
+    the port reports success just as cheerfully.
+    """
+    for path in VERSION_PATHS:
+        try:
+            return path.read_text(encoding="utf-8").strip()
+        except OSError:
+            continue
+    return "unknown"
+
 
 def build_fingerprint() -> str:
     """A short hash over everything the server serves and everything it is.
@@ -280,6 +303,7 @@ class M0Server:
                 {
                     "status": "ok",
                     "service": "slate-m0",
+                    "version": release_version(),
                     "proto": 1,
                     "build": build_fingerprint(),
                     "page": PAGE_PATH,

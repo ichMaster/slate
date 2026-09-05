@@ -126,6 +126,45 @@ static void wire_update_cb(const char *widget_id, const char *json_update)
 
 /* -- boot ------------------------------------------------------------------ */
 
+/* Ідентичність прошивки — перше, що йде в лог.
+ *
+ * Відповідає на питання "чи взагалі доїхав flash", яке інакше доводиться
+ * вгадувати з вигляду екрана. Разом із відбитком сервера у /health це дає обидві
+ * половини: що на пристрої і що на сервері.
+ */
+static void log_build_identity(void)
+{
+    ESP_LOGI(TAG, "SLATE_LEDGER firmware_version=%s firmware_build=%s built=%s", SLATE_VERSION,
+             SLATE_GIT_SHA, SLATE_BUILT);
+}
+
+/* Повторюємо рядок ідентичності раз на 30 секунд.
+ *
+ * Лише при старті його було недостатньо: щоб дізнатися версію прошивки,
+ * доводилося перезавантажити пристрій — а перезавантаження і є те, що ми
+ * намагаємось не робити, перевіряючи, чи доїхало оновлення. Один рядок на
+ * чверть хвилини не засмічує лог і робить версію читабельною будь-коли.
+ */
+#define IDENTITY_REPEAT_US (15 * 1000 * 1000)
+
+static void identity_timer_cb(void *arg)
+{
+    (void)arg;
+    log_build_identity();
+}
+
+static void start_identity_heartbeat(void)
+{
+    const esp_timer_create_args_t args = {
+        .callback = identity_timer_cb,
+        .name = "slate_identity",
+    };
+    esp_timer_handle_t timer = NULL;
+    if (esp_timer_create(&args, &timer) == ESP_OK) {
+        esp_timer_start_periodic(timer, IDENTITY_REPEAT_US);
+    }
+}
+
 static void log_boot_ledger(slate_panel_revision_t panel)
 {
     ESP_LOGI(TAG, "SLATE_LEDGER lvgl_version=%d.%d.%d", LVGL_VERSION_MAJOR, LVGL_VERSION_MINOR,
@@ -165,6 +204,8 @@ static bool render_page(const char *xml)
 void app_main(void)
 {
     ESP_LOGI(TAG, "Slate M0 — walking skeleton (v0.1)");
+    log_build_identity();
+    start_identity_heartbeat();
 
     /* Probe before the display starts: bsp_display_start() asserts outright on a
      * board it cannot identify, so anything learned after it is learned only on
