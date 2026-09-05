@@ -37,6 +37,13 @@ static int s_req_id;
  */
 static char s_session_id[16];
 
+/* Буфер збирання WS-кадрів. 16 КБ із запасом на документ у ~7.5 КБ; лежить
+ * статично, бо приходить із задачі websocket і malloc на кожен кадр був би
+ * марним.
+ */
+static char s_rx[16384];
+static size_t s_rx_len;
+
 const char *slate_session_id(void)
 {
     if (s_session_id[0] == '\0') {
@@ -263,8 +270,37 @@ static void ws_event_handler(void *arg, esp_event_base_t base, int32_t id, void 
         ESP_LOGW(TAG, "wire closed");
         break;
     case WEBSOCKET_EVENT_DATA:
-        if (event->op_code == 0x01 && event->data_len > 0) { /* text frame */
-            on_frame(event->data_ptr, event->data_len);
+        /* Великі повідомлення приходять шматками.
+         *
+         * Документ — близько 7.5 КБ, і esp_websocket_client віддає його
+         * кількома подіями: у кожній `data_len` — лише частина, а
+         * `payload_len` — повний розмір. Парсити кожен шматок як окремий JSON
+         * означає безкінечне "ignoring unparseable frame" саме на тих кадрах,
+         * які найбільше потрібні. Тому збираємо за `payload_offset` і віддаємо
+         * на розбір лише зібране повністю.
+         *
+         * Текстові кадри мають op_code 0x01, продовження — 0x00.
+         */
+        if (event->op_code != 0x01 && event->op_code != 0x00) {
+            break;
+        }
+        if (event->payload_len > 0 && (size_t)event->payload_len > sizeof(s_rx) - 1) {
+            ESP_LOGW(TAG, "frame of %d bytes exceeds the %u-byte buffer; dropped",
+                     event->payload_len, (unsigned)(sizeof(s_rx) - 1));
+            s_rx_len = 0;
+            break;
+        }
+        if (event->payload_offset == 0) {
+            s_rx_len = 0;
+        }
+        if (event->data_len > 0 && s_rx_len + (size_t)event->data_len < sizeof(s_rx)) {
+            memcpy(s_rx + s_rx_len, event->data_ptr, (size_t)event->data_len);
+            s_rx_len += (size_t)event->data_len;
+        }
+        if (event->payload_len > 0 && s_rx_len >= (size_t)event->payload_len) {
+            s_rx[s_rx_len] = '\0';
+            on_frame(s_rx, (int)s_rx_len);
+            s_rx_len = 0;
         }
         break;
     default:
