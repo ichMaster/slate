@@ -134,6 +134,18 @@ detect_port() {
     echo "/dev/$f"
 }
 
+# Рахує збіги у файлі. Обгортка потрібна, бо `grep -c` друкує 0 І повертає
+# ненульовий код, коли збігів немає — тому `grep -c ... || echo 0` дописував
+# ДРУГИЙ нуль. Значення на кшталт "0\n0" ламали і числові порівняння
+# (справний пристрій отримував FAIL), і сам звіт.
+count_matches() {
+    local pattern="$1" file="$2" n
+    [ -f "$file" ] || { echo 0; return 0; }
+    n="$(grep -aEc "$pattern" "$file" 2>/dev/null)"
+    [ -z "$n" ] && n=0
+    echo "$n"
+}
+
 # Знімає лог із пристрою у файл протягом N секунд.
 capture() {
     local secs="$1" outfile="$2" port
@@ -255,7 +267,7 @@ fi
 
 say "  A4 — непроханий пуш годинника..."
 "$PYTHON" tools/fake_device.py --increments 0 --watch 4 > "$OUT/a4-clock.txt" 2>&1
-A4_PUSHES="$(grep -c "push" "$OUT/a4-clock.txt" 2>/dev/null || echo 0)"
+A4_PUSHES="$(count_matches "push" "$OUT/a4-clock.txt")"
 if [ "$A4_PUSHES" -ge 2 ] && ! grep -q "req_id" "$OUT/a4-clock.txt"; then
     pass "A4 годинник пушить сам ($A4_PUSHES кадрів за 4с, без req_id)"
 else
@@ -286,7 +298,7 @@ say "  B1 — знімаю лог завантаження (25с). Пристр�
 capture 25 "$OUT/b1-boot.log"
 led "$OUT/b1-boot.log" > "$OUT/b1-ledger.txt"
 
-B1_BOOTS="$(grep -ac "walking skeleton" "$OUT/b1-boot.log" 2>/dev/null || echo 0)"
+B1_BOOTS="$(count_matches "walking skeleton" "$OUT/b1-boot.log")"
 B1_PANEL="$(grep -aoE "panel_revision=[A-Za-z0-9]+" "$OUT/b1-boot.log" | head -1)"
 B1_BSP="$(grep -aoE "Discovered board version [0-9] \([^)]*\)" "$OUT/b1-boot.log" | head -1)"
 B1_XML="$(grep -aoE "lv_xml=[A-Z_]+" "$OUT/b1-boot.log" | head -1)"
@@ -333,7 +345,7 @@ say "  ${C_ASK}ТИКАЙ В ЕКРАН ЗАРАЗ${C_OFF} — у різні к�
 say ""
 capture 15 "$OUT/b2-touch.log"
 
-B2_TOUCHES="$(grep -ac "touch x=" "$OUT/b2-touch.log" 2>/dev/null || echo 0)"
+B2_TOUCHES="$(count_matches "touch x=" "$OUT/b2-touch.log")"
 grep -aoE "touch x=[0-9-]+ y=[0-9-]+ \([a-z]+\)" "$OUT/b2-touch.log" 2>/dev/null | head -12 > "$OUT/b2-coords.txt"
 
 rec ""; rec "### B2 — тач"; rec ""
@@ -375,8 +387,8 @@ sleep 1
 # немає.
 capture 20 "$OUT/b3-unreachable.log"
 
-B3_BOOTS="$(grep -ac "walking skeleton" "$OUT/b3-unreachable.log" 2>/dev/null || echo 0)"
-B3_PANIC="$(grep -ac "abort() was called\|Guru Meditation" "$OUT/b3-unreachable.log" 2>/dev/null || echo 0)"
+B3_BOOTS="$(count_matches "walking skeleton" "$OUT/b3-unreachable.log")"
+B3_PANIC="$(count_matches "abort\\(\\) was called|Guru Meditation" "$OUT/b3-unreachable.log")"
 rec ""; rec "### B3 — сервер недоступний"; rec ""
 rec "Завантажень за 20с: **$B3_BOOTS** · паніка: **$B3_PANIC**"
 
@@ -398,7 +410,7 @@ B3_SCREEN="$ANSWER"
 head_ "C. Мережа (DoD)"
 rec ""; rec "## C. Мережа"; rec ""
 
-C6_FAIL="$(grep -ac "sdmmc_card_init failed\|ensure_slave_bus_ready failed" "$OUT/b1-boot.log" 2>/dev/null || echo 0)"
+C6_FAIL="$(count_matches "sdmmc_card_init failed|ensure_slave_bus_ready failed" "$OUT/b1-boot.log")"
 WIFI_IP="$(grep -aoE "wifi_ip=[0-9.]+" "$OUT/b1-boot.log" | head -1)"
 
 if [ -n "$WIFI_IP" ]; then
@@ -413,7 +425,7 @@ if [ -n "$WIFI_IP" ]; then
     led "$OUT/c1-page.log" >> "$OUT/c-ledger.txt"
 
     C1_FETCH="$(grep -aoE "page_fetch_bytes=[0-9]+" "$OUT/c1-page.log" | head -1)"
-    C1_SUB="$(grep -ac "subscribed as" "$OUT/c1-page.log" 2>/dev/null || echo 0)"
+    C1_SUB="$(count_matches "subscribed as" "$OUT/c1-page.log")"
     C1_DOC="$(grep -aoE "doc_blocks=[0-9]+ doc_render_us=[0-9]+" "$OUT/c1-page.log" | head -1)"
 
     rec "\`\`\`"; rec "$C1_FETCH"; rec "$C1_DOC"; rec "\`\`\`"
@@ -431,7 +443,7 @@ if [ -n "$WIFI_IP" ]; then
 
     wait_enter "Натисни кнопку +1 на екрані 5 разів, потім Enter..."
     capture 12 "$OUT/c3-increment.log"
-    C3_EVENTS="$(grep -ac "increment pressed" "$OUT/c3-increment.log" 2>/dev/null || echo 0)"
+    C3_EVENTS="$(count_matches "increment pressed" "$OUT/c3-increment.log")"
     [ "$C3_EVENTS" -ge 3 ] && pass "C3 натискання дійшли: $C3_EVENTS" || fail "C3 натискань не видно ($C3_EVENTS)"
 
     ask_choice "Коли ти тиснув +1 — кнопка відповідала МИТТЄВО, а число мінялось трохи ПІЗНІШЕ?" \
