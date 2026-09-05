@@ -1,0 +1,45 @@
+# Slate M0 — build configuration.
+#
+# Kept as small as it can be: everything here is either required to boot the
+# Tab5's panel or required by a v0.1 question. The kept tree at v1.1 starts its
+# own config rather than inheriting this one.
+
+CONFIG_IDF_TARGET="esp32p4"
+
+# Silicon revision. The Tab5 on this desk reports ESP32-P4 v1.3, and ESP-IDF
+# treats P4 revisions <3.0 and >=3.0 as **mutually exclusive** build targets —
+# "huge hardware difference", in its own Kconfig. IDF 5.5's default is v3.1, so
+# without these two lines the bootloader refuses to flash this board:
+#
+#   bootloader.bin requires chip revision in range [v3.1 - v3.99]
+#   (this chip is revision v1.3)
+#
+# A binary built this way runs on 0.x/1.x boards and NOT on 3.x ones. If a
+# second Tab5 with 3.x silicon ever appears, it needs its own build, not a
+# tweak to this one — which is exactly why v0.1 records the revision.
+CONFIG_ESP32P4_SELECTS_REV_LESS_V3=y
+CONFIG_ESP32P4_REV_MIN_100=y
+
+# The P4 runs from PSRAM-backed framebuffers at 1280x720; the defaults are far
+# too small for a display this size.
+CONFIG_SPIRAM=y
+CONFIG_SPIRAM_MODE_HEX=y
+CONFIG_SPIRAM_SPEED_200M=y
+CONFIG_SPIRAM_XIP_FROM_PSRAM=y
+CONFIG_CACHE_L2_CACHE_256KB=y
+
+# LVGL's own task and the BSP's port task both want stack; the default main task
+# stack is not enough once a widget tree is being built.
+CONFIG_ESP_MAIN_TASK_STACK_SIZE=8192
+
+# Log at INFO so the panel-revision probe and the LVGL measurements are visible
+# over `idf.py monitor` without a rebuild.
+CONFIG_LOG_DEFAULT_LEVEL_INFO=y
+
+# USB-Serial-JTAG is the console: the Tab5 exposes exactly one data port and it
+# is the same one used to flash.
+CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG=y
+
+# Flash: 16 MB on the Tab5.
+CONFIG_ESPTOOLPY_FLASHSIZE_16MB=y
+CONFIG_PARTITION_TABLE_SINGLE_APP_LARGE=y

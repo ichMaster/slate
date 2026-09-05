@@ -224,3 +224,13 @@ __marimo__/
 codegen/runs/
 codegen/var/
 .venv/
+
+# ESP-IDF firmware build artefacts. sdkconfig is generated from
+# sdkconfig.defaults and carries machine-specific paths, so the defaults file is
+# the one under version control; managed_components/ is fetched from the
+# component registry against the pins in idf_component.yml.
+build/
+sdkconfig
+sdkconfig.old
+managed_components/
+dependencies.lock
