@@ -1,5 +1,8 @@
 #include "xml_poc.h"
 
+#include <stdlib.h>
+#include <string.h>
+
 #include "esp_heap_caps.h"
 #include "esp_log.h"
 #include "esp_timer.h"
@@ -12,12 +15,14 @@
 static const char *TAG = "slate.xml";
 
 /* The page XML, embedded from m0/apps/m0.xml at build time (see
- * main/CMakeLists.txt). v0.1 fetches nothing yet — HTTP arrives with SLATE-006
- * — so the file travels in the binary and the PoC measures parsing alone,
- * uncontaminated by the network.
+ * main/CMakeLists.txt). It is the same file the server serves, so the verdict is
+ * taken against the real page — but from the binary, so a network failure
+ * cannot erase the one measurement this milestone exists to produce.
  */
 extern const uint8_t m0_xml_start[] asm("_binary_m0_xml_start");
 extern const uint8_t m0_xml_end[] asm("_binary_m0_xml_end");
+
+static bool s_initialised;
 
 static uint32_t free_internal(void)
 {
@@ -42,12 +47,23 @@ static uint32_t lv_pool_free(uint32_t *total_out)
     return (uint32_t)mon.free_size;
 }
 
+void slate_xml_init(void)
+{
+#if LV_USE_XML
+    if (!s_initialised) {
+        lv_xml_init();
+        s_initialised = true;
+    }
+#endif
+}
+
 void slate_xml_log_verdict(const slate_xml_verdict_t *verdict)
 {
     if (!verdict->available) {
         ESP_LOGE(TAG, "SLATE_LEDGER lv_xml=UNAVAILABLE reason=built_without_LV_USE_XML");
         return;
     }
+    ESP_LOGI(TAG, "SLATE_LEDGER xml_bytes=%lu", (unsigned long)verdict->xml_bytes);
     if (!verdict->registered) {
         ESP_LOGE(TAG, "SLATE_LEDGER lv_xml=NO_GO stage=register");
         return;
@@ -57,15 +73,18 @@ void slate_xml_log_verdict(const slate_xml_verdict_t *verdict)
         return;
     }
 
-    /* Heap deltas are reported as costs (positive = memory consumed), because
-     * that is the number v1.3 needs when deciding how many components a page
-     * can carry.
+    /* Deltas are reported as costs (positive = memory consumed), because that is
+     * the number v1.3 needs when deciding how much a page may carry.
      */
     const int32_t register_cost = (int32_t)verdict->heap_before - (int32_t)verdict->heap_after_reg;
     const int32_t create_cost =
         (int32_t)verdict->heap_after_reg - (int32_t)verdict->heap_after_create;
     const int32_t psram_cost =
         (int32_t)verdict->psram_before - (int32_t)verdict->psram_after_create;
+    const int32_t lv_register_cost =
+        (int32_t)verdict->lv_free_before - (int32_t)verdict->lv_free_after_reg;
+    const int32_t lv_create_cost =
+        (int32_t)verdict->lv_free_after_reg - (int32_t)verdict->lv_free_after_create;
 
     ESP_LOGI(TAG, "SLATE_LEDGER lv_xml=GO lvgl=%d.%d.%d", LVGL_VERSION_MAJOR, LVGL_VERSION_MINOR,
              LVGL_VERSION_PATCH);
@@ -76,14 +95,6 @@ void slate_xml_log_verdict(const slate_xml_verdict_t *verdict)
     ESP_LOGI(TAG, "SLATE_LEDGER xml_psram_cost=%ld heap_free_after=%lu psram_free_after=%lu",
              (long)psram_cost, (unsigned long)verdict->heap_after_create,
              (unsigned long)verdict->psram_after_create);
-
-    /* The number v1.3 actually needs: what a parsed page costs inside LVGL's
-     * own pool, and how much of that pool is left for the pages after it.
-     */
-    const int32_t lv_register_cost =
-        (int32_t)verdict->lv_free_before - (int32_t)verdict->lv_free_after_reg;
-    const int32_t lv_create_cost =
-        (int32_t)verdict->lv_free_after_reg - (int32_t)verdict->lv_free_after_create;
     ESP_LOGI(TAG,
              "SLATE_LEDGER lv_pool_total=%lu lv_register_cost=%ld lv_widget_tree_cost=%ld "
              "lv_pool_free_after=%lu",
@@ -91,36 +102,25 @@ void slate_xml_log_verdict(const slate_xml_verdict_t *verdict)
              (unsigned long)verdict->lv_free_after_create);
 }
 
-slate_xml_verdict_t slate_xml_poc_run(lv_obj_t *parent, const char *name)
+slate_xml_verdict_t slate_xml_render(lv_obj_t *parent, const char *name, const char *xml,
+                                     lv_obj_t **out_root)
 {
     slate_xml_verdict_t verdict = {0};
+    if (out_root != NULL) {
+        *out_root = NULL;
+    }
 
 #if !LV_USE_XML
-    /* Not a failure of the module — a failure to build it. Kept distinct from
-     * NO_GO because the two have completely different consequences.
-     */
     (void)parent;
     (void)name;
-    ESP_LOGE(TAG, "built without LV_USE_XML; nothing to measure");
+    (void)xml;
+    ESP_LOGE(TAG, "built without LV_USE_XML; nothing to render");
     return verdict;
 #else
     verdict.available = true;
+    verdict.xml_bytes = (uint32_t)strlen(xml);
 
-    /* The embedded blob is not NUL-terminated by EMBED_TXTFILES in every IDF
-     * version, so copy it into a terminated buffer rather than trusting it.
-     */
-    const size_t xml_len = (size_t)(m0_xml_end - m0_xml_start);
-    char *xml = malloc(xml_len + 1);
-    if (xml == NULL) {
-        ESP_LOGE(TAG, "out of memory copying the %u-byte page", (unsigned)xml_len);
-        return verdict;
-    }
-    memcpy(xml, m0_xml_start, xml_len);
-    xml[xml_len] = '\0';
-
-    ESP_LOGI(TAG, "SLATE_LEDGER xml_bytes=%u", (unsigned)xml_len);
-
-    lv_xml_init();
+    slate_xml_init();
 
     verdict.heap_before = free_internal();
     verdict.psram_before = free_psram();
@@ -137,7 +137,6 @@ slate_xml_verdict_t slate_xml_poc_run(lv_obj_t *parent, const char *name)
 
     if (!verdict.registered) {
         ESP_LOGE(TAG, "lv_xml_register_component_from_data failed for %s", name);
-        free(xml);
         return verdict;
     }
 
@@ -153,12 +152,43 @@ slate_xml_verdict_t slate_xml_poc_run(lv_obj_t *parent, const char *name)
 
     if (!verdict.created) {
         ESP_LOGE(TAG, "lv_xml_create returned NULL for %s", name);
+    } else if (out_root != NULL) {
+        *out_root = root;
     }
+    return verdict;
+#endif
+}
 
-    /* The registered component keeps its own copy of the definition, so this
-     * one is ours to release — and releasing it keeps the heap figures above
-     * honest about what the renderer actually retains.
+slate_xml_verdict_t slate_xml_measure_embedded(lv_obj_t *parent)
+{
+    slate_xml_verdict_t verdict = {0};
+
+#if !LV_USE_XML
+    (void)parent;
+    ESP_LOGE(TAG, "built without LV_USE_XML; nothing to measure");
+    return verdict;
+#else
+    /* EMBED_TXTFILES does not NUL-terminate in every IDF version, so copy into a
+     * terminated buffer rather than trusting it.
      */
+    const size_t xml_len = (size_t)(m0_xml_end - m0_xml_start);
+    char *xml = malloc(xml_len + 1);
+    if (xml == NULL) {
+        ESP_LOGE(TAG, "out of memory copying the %u-byte page", (unsigned)xml_len);
+        return verdict;
+    }
+    memcpy(xml, m0_xml_start, xml_len);
+    xml[xml_len] = '\0';
+
+    /* Registered under its own name so it cannot collide with the live page
+     * fetched over HTTP, and torn down immediately: this is a measurement, not
+     * the screen the user gets.
+     */
+    lv_obj_t *root = NULL;
+    verdict = slate_xml_render(parent, "m0_poc", xml, &root);
+    if (root != NULL) {
+        lv_obj_delete(root);
+    }
     free(xml);
     return verdict;
 #endif

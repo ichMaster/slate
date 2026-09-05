@@ -1,0 +1,38 @@
+menu "Slate M0"
+
+    config SLATE_WIFI_SSID
+        string "WiFi SSID"
+        default ""
+        help
+            The network the Tab5 joins. ARCHITECTURE.md §Security allows WiFi
+            credentials and the server address to live in firmware — they are the
+            only secrets that may — but this repository is public, so put real
+            values in sdkconfig.defaults.local (gitignored) rather than here.
+
+    config SLATE_WIFI_PASSWORD
+        string "WiFi password"
+        default ""
+        help
+            Leave empty for an open network. See the SSID help above: real values
+            belong in sdkconfig.defaults.local, never in a committed file.
+
+    config SLATE_SERVER_HOST
+        string "Slate server host"
+        default "192.168.1.197"
+        help
+            The deployment server (ARCHITECTURE.md §Deployment and test
+            topology). v0.1 hard-codes it; the server picker arrives at v3.1.
+
+    config SLATE_SERVER_PORT
+        int "Slate server port"
+        default 8000
+        range 1 65535
+
+    config SLATE_PAGE_PATH
+        string "Page path"
+        default "/apps/m0.xml"
+        help
+            Fetched once at boot over plain HTTP. No cache and no revalidation at
+            v0.1 — honest caching is v1.1's whole phase.
+
+endmenu

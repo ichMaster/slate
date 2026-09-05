@@ -1,4 +1,4 @@
-/* The lv_xml go/no-go — v0.1's reason to exist.
+/* The lv_xml go/no-go, and the renderer the rest of M0 uses.
  *
  * ROADMAP §v0.1 and the specification's §9 carry exactly one open question:
  * does LVGL's XML module build and run on the ESP32-P4? Everything about the
@@ -6,9 +6,9 @@
  * "no" — a vendored SAX parser with the vocabulary hand-mapped to lv_* calls —
  * costs enough that guessing is not an option.
  *
- * This module answers it with measurements, not an opinion: register a page
- * from XML, instantiate it, and report parse time, create time, and the heap
- * each step cost.
+ * The verdict is taken against an **embedded** copy of the page, so it is
+ * network-independent: a WiFi failure must not be able to erase the one
+ * measurement this milestone exists to produce.
  */
 
 #pragma once
@@ -26,10 +26,11 @@ typedef struct {
     bool     available;      /* built with LV_USE_XML at all */
     bool     registered;     /* the page XML parsed and registered */
     bool     created;        /* a widget tree was instantiated from it */
+    uint32_t xml_bytes;
     int64_t  register_us;    /* parse + register time */
     int64_t  create_us;      /* instantiate time */
     uint32_t heap_before;    /* internal free heap before registering */
-    uint32_t heap_after_reg; /* after registering */
+    uint32_t heap_after_reg;
     uint32_t heap_after_create;
     uint32_t psram_before;
     uint32_t psram_after_create;
@@ -43,11 +44,19 @@ typedef struct {
     uint32_t lv_total;
 } slate_xml_verdict_t;
 
-/* Register the embedded M0 page under `name` and instantiate it into `parent`.
- * Logs every measurement with a SLATE_LEDGER prefix. Returns the verdict; the
- * created object, if any, is left on `parent`.
+/* Initialise LVGL's XML module. Idempotent. */
+void slate_xml_init(void);
+
+/* Register `xml` under `name` and instantiate it into `parent`, measuring both
+ * steps. `out_root` receives the created object. Returns the verdict.
  */
-slate_xml_verdict_t slate_xml_poc_run(lv_obj_t *parent, const char *name);
+slate_xml_verdict_t slate_xml_render(lv_obj_t *parent, const char *name, const char *xml,
+                                     lv_obj_t **out_root);
+
+/* The SLATE-002 verdict, taken against the page embedded in the binary and torn
+ * down again. Independent of the network by design.
+ */
+slate_xml_verdict_t slate_xml_measure_embedded(lv_obj_t *parent);
 
 /* One line summarising the verdict, for the boot log and SLATE-008. */
 void slate_xml_log_verdict(const slate_xml_verdict_t *verdict);

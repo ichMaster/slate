@@ -29,3 +29,19 @@ dependencies:
   ## and its consequence for the component machinery at v1.3.
   lvgl/lvgl:
     version: "~9.4.0"
+
+  ## The ESP32-P4 has no radio of its own. The Tab5 pairs it with an
+  ## ESP32-C6-MINI-1U, and esp_wifi_remote forwards the ordinary esp_wifi API to
+  ## it over esp_hosted's SDIO link — so application code calls esp_wifi_* as
+  ## usual and the split is invisible above this line.
+  ##
+  ## The C6 must be running matching esp_hosted slave firmware. M5Stack ships it
+  ## pre-flashed; if WiFi never associates, that is the first thing to check.
+  espressif/esp_wifi_remote:
+    version: "*"
+  espressif/esp_hosted:
+    version: "*"
+
+  ## The WebSocket half of the trimmed wire.
+  espressif/esp_websocket_client:
+    version: "^1.5"
