@@ -1,0 +1,52 @@
+Slate — release notes
+=====================
+
+Version 0.1.0 (2026-09-05)
+---------------------------
+Roadmap phase v0.1 — Walking skeleton (M0). The whole concept demonstrated on
+one screen, and the P4 question answered.
+
+The milestone, in one sentence: power on, the page arrives from the server, the
+clock ticks, the button increments a count that lives on the server, the
+document renders and scrolls — and a power cycle does not reset the counter,
+because the count never lived on the device.
+
+Delivered
+- Trimmed wire (subscribe/data/event) over WebSocket, page over HTTP, one port.
+- Counter and 1 Hz clock owned by the server; the clock pushes unprompted.
+- doc-view v0: the server parses Markdown into typed blocks, the device renders
+  them as a scrollable column and never parses Markdown itself.
+- Tab5 bring-up: display, touch, panel-revision probe, three firmware states.
+- Test scaffolding every later phase inherits: the fake device and 94 tests.
+- Deployment to 192.168.1.197 with a version-checked health endpoint.
+
+Verdicts recorded (specification/roadmap/implementation/v0.1-poc-ledger.md)
+- lv_xml runs on the ESP32-P4: GO. Registers a page in ~0.9 ms, builds the
+  widget tree in ~3.5 ms, costs ~3.2 KB of LVGL's pool. The vendored SAX-parser
+  fallback is not needed.
+- But LVGL removed the XML module in 9.5.0, and the BSP resolves there by
+  default. LVGL is pinned to 9.4.0; v1.3 must decide deliberately whether to
+  build the component machinery on a module upstream has dropped.
+- Board is version 3 (LCD ST7121, touch ST712x FW 1) — a third answer to the
+  roadmap's "ILI9881C vs ST7123/ST7121".
+- P4 silicon is v1.3, so this is a pre-v3 build and will not run on 3.x boards.
+- doc-view renders 55 blocks in 50.8 ms at legible type.
+
+Hardware facts that cost hours and belong in v1.1's kept tree
+- The touch controller does not appear on I2C until the LCD rail is powered,
+  and the BSP's own detection enables only the touch rail, so it asserts and
+  boot-loops on this board revision.
+- The Tab5's SDIO pins to the C6 are CLK 12, CMD 13, D0-D3 on 11/10/9/8, reset
+  15 active HIGH — not esp_hosted's eval-board defaults. The visible pin options
+  are computed and silently ignore direct assignment.
+- LVGL draw buffers must live in PSRAM once esp_hosted is linked in.
+- lv_xml ignores unregistered font names silently, so fonts referenced from page
+  XML must be registered first.
+
+Known and intended
+- Cyrillic renders as tofu. The stock faces are Latin-only; both real faces
+  carry Cyrillic from v1.3.
+- The counter is 48 px, not the brief's ~80 px: 48 is the largest stock
+  Montserrat, and ~80 px is recorded as a requirement on the stat-value role.
+- v0.1's code under m0/ is quarry. The kept firmware/ and server/ trees begin
+  at v1.1 and are not seeded from it.
