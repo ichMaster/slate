@@ -1,0 +1,159 @@
+#!/usr/bin/env bash
+# Slate — деплой сервера на 192.168.1.197.
+#
+# ARCHITECTURE.md §Deployment and test topology: сервер живе там і ніде інде, і
+# деплоїться щоразу, коли змінюється його код. Це частина циклу розробки, а не
+# подія релізу.
+#
+#   ./tools/deploy              синхронізувати, перезапустити, перевірити
+#   ./tools/deploy --check      лише перевірити, що там крутиться
+#   ./tools/deploy --stop       зупинити
+#
+# Скрипт існує, бо ручний запуск сервера на ноутбуці одного разу вже коштував
+# годин: він працював на localhost, був недосяжний з мережі через файрвол, а
+# половину часу не був запущений узагалі. Тепер "чи він живий і чи це та сама
+# збірка" — питання з машинною відповіддю.
+
+set -uo pipefail
+
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$REPO_ROOT" || exit 1
+
+HOST="${SLATE_HOST:-slate-server}"
+ADDR="${SLATE_ADDR:-192.168.1.197}"
+# 8010, не 8000: на цьому хості 8000 уже зайнятий roboface_server.app, який
+# працює там постійно. Специфікація Slate писалася в припущенні, що 8000 вільний
+# — на цій машині це не так, і чужий сервіс має пріоритет.
+PORT="${SLATE_PORT:-8010}"
+REMOTE_DIR="${SLATE_REMOTE_DIR:-/home/ich/slate-m0}"
+
+C_OK=$'\033[0;32m'; C_BAD=$'\033[0;31m'; C_DIM=$'\033[0;90m'; C_HEAD=$'\033[1;36m'; C_OFF=$'\033[0m'
+say()  { printf '%s\n' "$*"; }
+ok()   { printf '%s  OK%s   %s\n' "$C_OK" "$C_OFF" "$*"; }
+bad()  { printf '%s  FAIL%s %s\n' "$C_BAD" "$C_OFF" "$*"; }
+note() { printf '%s   %s%s\n' "$C_DIM" "$*" "$C_OFF"; }
+
+# Відбиток збірки рахується з тих самих файлів, що й на сервері, тим самим
+# способом. Якщо вони розійдуться — значить сервер віддає не те, що тут лежить.
+local_fingerprint() {
+    "$REPO_ROOT/.venv/bin/python" - <<'PY'
+import hashlib, pathlib
+root = pathlib.Path(".")
+digest = hashlib.sha256()
+for p in (root/"m0/server/server.py", root/"m0/server/doc.md", root/"m0/apps/m0.xml"):
+    digest.update(p.read_bytes() if p.exists() else b"<missing>")
+print(digest.hexdigest()[:12])
+PY
+}
+
+remote_health() {
+    curl -s -m 6 "http://$ADDR:$PORT/health" 2>/dev/null
+}
+
+# Зупиняємо ТІЛЬКИ свій процес, за повним шляхом.
+#
+# `pkill -f server.py` вбив би будь-що зі схожим іменем — на цьому хості поруч
+# живе чужий roboface_server.app, і випадково його прибити було б значно гірше,
+# ніж не задеплоїтись.
+do_stop() {
+    ssh -o BatchMode=yes -o ConnectTimeout=8 "$HOST" \
+        "pkill -f '$REMOTE_DIR/server/server.py' 2>/dev/null; sleep 1; true" >/dev/null 2>&1
+    note "зупинено (лише свій процес)"
+}
+
+do_check() {
+    local body expected got
+    body="$(remote_health)"
+    if [ -z "$body" ]; then
+        bad "сервер не відповідає на http://$ADDR:$PORT/health"
+        return 1
+    fi
+    ok "сервер відповідає: $body"
+
+    expected="$(local_fingerprint)"
+    got="$(printf '%s' "$body" | sed -n 's/.*"build": *"\([^"]*\)".*/\1/p')"
+    if [ "$expected" = "$got" ]; then
+        ok "версія збігається (build=$got)"
+        return 0
+    fi
+    bad "версія РОЗІЙШЛАСЯ: на сервері '$got', локально '$expected' — потрібен деплой"
+    return 1
+}
+
+case "${1:-deploy}" in
+    --check) do_check; exit $? ;;
+    --stop)  do_stop; exit 0 ;;
+esac
+
+say ""
+say "${C_HEAD}Деплой Slate M0 -> $ADDR${C_OFF}"
+
+# 1. Доступність
+if ! ssh -o BatchMode=yes -o ConnectTimeout=8 "$HOST" 'true' 2>/dev/null; then
+    bad "немає SSH до $HOST — перевір ~/.ssh/config"
+    exit 1
+fi
+ok "SSH до $HOST"
+
+# 2. Залежності на віддаленому хості
+ssh -o BatchMode=yes "$HOST" "mkdir -p '$REMOTE_DIR'" 2>/dev/null
+if ! ssh -o BatchMode=yes "$HOST" "python3 -c 'import websockets' 2>/dev/null"; then
+    note "ставлю websockets на сервері..."
+    ssh -o BatchMode=yes "$HOST" \
+        "python3 -m pip install --user --quiet websockets 2>&1 | tail -2" 2>&1 | tail -2
+fi
+ssh -o BatchMode=yes "$HOST" "python3 -c 'import websockets; print(\"websockets\", websockets.__version__)'" 2>/dev/null \
+    && ok "залежності на місці" || { bad "websockets не встановився"; exit 1; }
+
+# 3. Синхронізація
+do_stop
+if ! rsync -az --delete \
+        "$REPO_ROOT/m0/server/" "$HOST:$REMOTE_DIR/server/" 2>/dev/null; then
+    bad "rsync server/ не пройшов"
+    exit 1
+fi
+if ! rsync -az --delete \
+        "$REPO_ROOT/m0/apps/" "$HOST:$REMOTE_DIR/apps/" 2>/dev/null; then
+    bad "rsync apps/ не пройшов"
+    exit 1
+fi
+rsync -az --delete "$REPO_ROOT/tests/" "$HOST:$REMOTE_DIR/tests/" 2>/dev/null
+rsync -az "$REPO_ROOT/tools/fake_device.py" "$HOST:$REMOTE_DIR/tools/" 2>/dev/null
+ok "код синхронізовано в $REMOTE_DIR"
+
+# 3.5. Тести — на сервері, і перезапуск лише на зеленому.
+#
+# Порядок узятий зі специфікації дослівно (ARCHITECTURE.md §Deployment and test
+# topology): sync -> віддалений pytest -> перезапуск на зеленому. Червона сюїта
+# лишає працювати попередню версію, а не викладає зламану.
+if [ "${SLATE_SKIP_REMOTE_TESTS:-0}" != "1" ]; then
+    note "ганяю сюїту на сервері..."
+    REMOTE_TESTS="$(ssh -o BatchMode=yes "$HOST" \
+        "cd '$REMOTE_DIR' && python3 -m pytest tests -q -p no:warnings 2>&1 | tail -3" 2>/dev/null)"
+    if printf '%s' "$REMOTE_TESTS" | grep -q "passed"; then
+        ok "сюїта на сервері зелена: $(printf '%s' "$REMOTE_TESTS" | tail -1)"
+    else
+        bad "сюїта на сервері НЕ зелена — попередня версія лишається працювати"
+        printf '%s\n' "$REMOTE_TESTS"
+        exit 1
+    fi
+fi
+
+# 4. Запуск
+ssh -o BatchMode=yes "$HOST" \
+    "cd '$REMOTE_DIR/server' && SLATE_PORT=$PORT nohup python3 '$REMOTE_DIR/server/server.py' > '$REMOTE_DIR/server.log' 2>&1 & sleep 2; true" \
+    >/dev/null 2>&1
+sleep 2
+
+# 5. Перевірка — з мережі, не з localhost сервера. Саме цю різницю я раніше
+#    проґавив, і саме вона має значення для пристрою.
+if do_check; then
+    say ""
+    ok "готово — пристрій має вказувати на $ADDR:$PORT"
+    exit 0
+fi
+
+say ""
+note "лог сервера:"
+ssh -o BatchMode=yes "$HOST" "tail -15 '$REMOTE_DIR/server.log' 2>/dev/null" 2>/dev/null
+exit 1

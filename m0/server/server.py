@@ -21,8 +21,10 @@ The library choice (stdlib + ``websockets``) is this file's own business and is
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
 import logging
+import os
 from collections.abc import Callable, Iterable
 from datetime import datetime
 from pathlib import Path
@@ -41,6 +43,28 @@ APPS_DIR: Final = Path(__file__).resolve().parent.parent / "apps"
 
 #: The one hard-coded document `doc-view` v0 renders.
 DOC_PATH: Final = Path(__file__).resolve().parent / "doc.md"
+
+#: Health/version endpoint. Exists because "is the server up?" and "is it the
+#: build I just deployed?" are different questions, and answering the first
+#: while assuming the second is how a stale server goes unnoticed for hours.
+HEALTH_PATH: Final = "/health"
+
+
+def build_fingerprint() -> str:
+    """A short hash over everything the server serves and everything it is.
+
+    Deliberately covers the page and the document as well as the code: swapping
+    the served page without touching server.py still produces a different
+    server from the device's point of view, and that is the difference the
+    fingerprint has to catch.
+    """
+    digest = hashlib.sha256()
+    for path in (Path(__file__).resolve(), DOC_PATH, APPS_DIR / "m0.xml"):
+        try:
+            digest.update(path.read_bytes())
+        except OSError:
+            digest.update(b"<missing>")
+    return digest.hexdigest()[:12]
 
 #: The interval of the unsolicited clock push. One second, per ROADMAP §v0.1.
 CLOCK_INTERVAL_S: Final = 1.0
@@ -251,6 +275,22 @@ class M0Server:
         path = request.path.split("?", 1)[0]
         if path == "/ws":
             return None
+        if path == HEALTH_PATH:
+            body = json.dumps(
+                {
+                    "status": "ok",
+                    "service": "slate-m0",
+                    "proto": 1,
+                    "build": build_fingerprint(),
+                    "page": PAGE_PATH,
+                    "doc_blocks": len(self.doc),
+                }
+            ).encode("utf-8")
+            headers = Headers(
+                {"Content-Type": "application/json", "Content-Length": str(len(body))}
+            )
+            return Response(200, "OK", headers, body)
+
         if path == PAGE_PATH:
             try:
                 body = (APPS_DIR / "m0.xml").read_bytes()
@@ -283,8 +323,12 @@ async def run(
 
 def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
-    log.info("Slate M0 server on :8000 — page %s, wire /ws", PAGE_PATH)
-    asyncio.run(run())
+    # Порт з оточення: на сервері розгортання 8000 уже зайнятий стороннім
+    # сервісом, тож зашивати його в код означало б не піднятися взагалі.
+    port = int(os.environ.get("SLATE_PORT", "8000"))
+    log.info("Slate M0 server on :%d — page %s, wire /ws, build %s", port, PAGE_PATH,
+             build_fingerprint())
+    asyncio.run(run(port=port))
 
 
 if __name__ == "__main__":

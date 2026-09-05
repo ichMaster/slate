@@ -39,8 +39,14 @@ dependencies:
   ## pre-flashed; if WiFi never associates, that is the first thing to check.
   espressif/esp_wifi_remote:
     version: "*"
+
+  ## Закріплено на 2.x навмисно. esp_hosted 3.x — мажорне переписування, і його
+  ## SDIO-рукостискання не сходиться з тим, що вже прошито на C6 з заводу:
+  ## `send_op_cond` просто спливає за таймаутом, тобто слейв не відповідає
+  ## взагалі. Незакріплена версія тягла 3.0.6 і виглядала як "немає прошивки на
+  ## C6", хоча насправді це неспівпадіння протоколу господаря і слейва.
   espressif/esp_hosted:
-    version: "*"
+    version: "~2.9.7"
 
   ## The WebSocket half of the trimmed wire.
   espressif/esp_websocket_client:
